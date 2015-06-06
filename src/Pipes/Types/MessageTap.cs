@@ -2,10 +2,11 @@
 using System.Threading.Tasks;
 using Pipes.Abstraction;
 using Pipes.Exceptions;
+using Pipes.Implementation;
 using Pipes.Interfaces;
 using Pipes.Stubs;
 
-namespace Pipes.Implementation
+namespace Pipes.Types
 {
     internal abstract class MessageTap : Conduit
     {
