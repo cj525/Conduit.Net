@@ -73,7 +73,7 @@ namespace Pipes.Implementation
                     if( _queueThread == null )
                         _queueThread = new MessageQueueThread(Target.ContainedType.Name);
 
-                    _queueThread.Enqueue(() => Receiver.Receive(message));
+                    _queueThread.Enqueue(() => Receiver.Receive(message).Wait());
 
                     if (!_queueThread.IsStarted)
                     {
@@ -83,9 +83,7 @@ namespace Pipes.Implementation
                 }
                 else
                 {
-#pragma warning disable 4014
-                    Task.Run(() => Receiver.Receive(message));
-#pragma warning restore 4014
+                    await Task.Run(() => Receiver.Receive(message).Wait());
                 }
             }
         }
