@@ -84,12 +84,17 @@ namespace Pipes.Interfaces
     {
         IPipelineConnectorAsyncBuffered OnSeparateThread();
 
-        void InParallel();
+        IPipelineConnectorAsyncWait InParallel();
     }
 
-    public interface IPipelineConnectorAsyncBuffered
+    public interface IPipelineConnectorAsyncWait
     {
-        void WithQueueLengthOf(int queueLength);
+        void WithoutWaiting();
+    }
+
+    public interface IPipelineConnectorAsyncBuffered : IPipelineConnectorAsyncWait
+    {
+        IPipelineConnectorAsyncWait WithQueueLengthOf(int queueLength);
     }
 
     public interface IPipelineMessageChain

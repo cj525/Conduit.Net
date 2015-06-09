@@ -26,6 +26,7 @@ namespace Pipes.Implementation
         internal bool IsPrivate { get; set; }
 
         internal bool OffThread { get; set; }
+        internal bool WithWait { get; set; }
         
         internal bool Pooled { get; set; }
 
@@ -38,6 +39,7 @@ namespace Pipes.Implementation
             Source = source;
             MessageType = messageType;
             QueueLength = DefaultBufferLength;
+            WithWait = true;
         }
 
         public IPipelineConnectorAsyncBuffered OnSeparateThread()
@@ -46,16 +48,24 @@ namespace Pipes.Implementation
             return this;
         }
 
-        public void InParallel()
+        public IPipelineConnectorAsyncWait InParallel()
         {
             OffThread = true;
             Pooled = true;
+            return this;
         }
 
-        public void WithQueueLengthOf(int queueLength)
+        public IPipelineConnectorAsyncWait WithQueueLengthOf(int queueLength)
         {
             QueueLength = queueLength;
+            return this;
         }
+
+        public void WithoutWaiting()
+        {
+            WithWait = false;
+        }
+
 
         internal async Task Invoke(IPipelineMessage message)
         {
@@ -68,12 +78,13 @@ namespace Pipes.Implementation
             }
             else
             {
+                var task = WithWait ? () => Receiver.Receive(message).Wait() : (Action)(() => Receiver.Receive(message));
                 if (!Pooled)
                 {
                     if( _queueThread == null )
                         _queueThread = new MessageQueueThread(Target.ContainedType.Name);
 
-                    _queueThread.Enqueue(() => Receiver.Receive(message).Wait());
+                    _queueThread.Enqueue(task);
 
                     if (!_queueThread.IsStarted)
                     {
@@ -83,7 +94,7 @@ namespace Pipes.Implementation
                 }
                 else
                 {
-                    await Task.Run(() => Receiver.Receive(message).Wait());
+                    await Task.Run(task);
                 }
             }
         }
