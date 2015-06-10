@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Pipes.Abstraction;
 using Pipes.Exceptions;
@@ -78,13 +79,12 @@ namespace Pipes.Implementation
             }
             else
             {
-                var task = WithWait ? () => Receiver.Receive(message).Wait() : (Action)(() => Receiver.Receive(message));
                 if (!Pooled)
                 {
                     if( _queueThread == null )
                         _queueThread = new MessageQueueThread(Target.ContainedType.Name);
 
-                    _queueThread.Enqueue(task);
+                    _queueThread.Enqueue(WithWait ? () => Receiver.Receive(message).Wait() : (Action)(() => Receiver.Receive(message)));
 
                     if (!_queueThread.IsStarted)
                     {
@@ -94,7 +94,7 @@ namespace Pipes.Implementation
                 }
                 else
                 {
-                    await Task.Run(task);
+                    ThreadPool.QueueUserWorkItem(state => Receiver.Receive(message));
                 }
             }
         }
