@@ -108,7 +108,8 @@ namespace Pipes.Implementation
                 OffThread = OffThread,
                 Pooled = Pooled,
                 QueueLength = QueueLength,
-                Receiver = rx
+                Receiver = rx,
+                WithWait = WithWait,
             };
         }
 

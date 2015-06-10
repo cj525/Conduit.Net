@@ -115,11 +115,6 @@ namespace Pipes.Abstraction
             // Gather sender's types
             var senderTypes = _components.Select(component => component.GetType());
 
-            // Find all the potential message types
-            var messageTypes = _transmitters.Select(tx => tx.ContainedType).Union(_taps.Select( tap => tap.MessageType )).Distinct().ToArray();
-
-            //_tubes.Apply(tube => _receivers.Where(rx => rx.ContainedType == tube.Target.ContainedType).Apply(rx => tube.Receiver = rx));
-
             // For each sender, including null (tap), create conduit for each type of sendable message
             foreach (var senderType in senderTypes)
             {
