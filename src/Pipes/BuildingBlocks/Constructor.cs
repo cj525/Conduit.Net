@@ -24,7 +24,6 @@ namespace Pipes.BuildingBlocks
             if (_blackhole)
                 throw new NotAttachedException("Constructor is nonfunctional. (ctor without container)");
 
-            // Create tx socket
             pipeline.AddCtor(_constructor);
         }
 
@@ -38,18 +37,6 @@ namespace Pipes.BuildingBlocks
 
             _constructor = new ConstructorStub<T>(Component, _ctor);
             proxy = _constructor;
-        }
-
-        public void Using(ref Func<T> ctor) 
-        {
-            _blackhole = false;
-            if (ctor != default(Func<T>))
-            {
-                throw ProxyAlreadyAssignedException.ForType<T>("Attempted to reuse construction proxy.");
-            }
-
-            ctor = _ctor;
-            _constructor = new ConstructorStub<T>(Component, ctor);
         }
     }
 }

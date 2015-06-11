@@ -18,19 +18,14 @@ namespace Pipes.Interfaces
         IPipelineConstructorMany ConstructsMany(int count);
     }
 
-    public interface IPipelineConstructorBase
+    public interface IPipelineConstructor<T>  where T : PipelineComponent
     {
         void Into(ref Stub proxy);
     }
 
-    public interface IPipelineConstructor<T> : IPipelineConstructorBase where T : class
-    {
-        void Using(ref Func<T> ctor);
-    }
-
 
     // TODO: We still supporting Many?
-    public interface IPipelineConstructorManyTarget<out T> where T : class
+    public interface IPipelineConstructorManyTarget<out T> where T : PipelineComponent
     {
         void Into(ref Stub proxy);
     }
