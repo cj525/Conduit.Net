@@ -15,7 +15,7 @@ namespace Pipes.Interfaces
     {
         IPipelineConstructor<T> Constructs<T>(Func<T> ctor) where T : PipelineComponent;
 
-        IPipelineConstructorMany<T> ConstructsMany<T>(int count) where T : PipelineComponent;
+        IPipelineConstructorMany ConstructsMany(int count);
     }
 
     public interface IPipelineConstructorBase
@@ -35,10 +35,9 @@ namespace Pipes.Interfaces
         void Into(ref Stub proxy);
     }
 
-    public interface IPipelineConstructorMany<T> where T : class
+    public interface IPipelineConstructorMany
     {
-        IPipelineConstructorManyTarget<T> Using(Func<T> ctor);
-        
+        IPipelineConstructorManyTarget<T> Using<T>(Func<T> ctor) where T : PipelineComponent;
     }
 
     public interface IPipelineInvocation<out TArgument> // : IPipelineInvocationBase<TArgument>

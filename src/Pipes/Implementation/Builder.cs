@@ -54,14 +54,14 @@ namespace Pipes.Implementation
             return new Constructor<T>(_pipeline, ctor);
         }
 
-        public IPipelineConstructorMany<T> ConstructsMany<T>(int count) where T : PipelineComponent
+        public IPipelineConstructorMany ConstructsMany(int count)
         {
             if (_component != null)
             {
                 throw new NotSupportedException("Only the pipeline may declare a constructor manifold.");
             }
 
-            return new ConstructorManifold<T>(_pipeline,count);
+            return new ConstructorManifold(_pipeline,count);
         }
 
         public IPipelineComponentEmissionBuilder Emits<T>() where T : class
