@@ -9,7 +9,7 @@ namespace Pipes.Exceptions
         {
         }
 
-        public static ProxyAlreadyAssignedException Exception<T>(string message)
+        public static ProxyAlreadyAssignedException ForType<T>(string message)
         {
             return new ProxyAlreadyAssignedException(message, typeof (T));
         }

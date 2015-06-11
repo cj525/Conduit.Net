@@ -9,12 +9,6 @@ namespace Pipes.Stubs
         protected TransmitterStub(PipelineComponent component, Type containedType) : base(component,containedType)
         {
         }
-
-        internal bool IsAsync { get; set; }
-        public int AsyncBufferLength { get; set; }
-
-        public bool InParallel { get; set; }
-
     }
 
     public class TransmitterStub<T> : TransmitterStub where T : class

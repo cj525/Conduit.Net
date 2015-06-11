@@ -6,26 +6,23 @@ using Pipes.Stubs;
 
 namespace Pipes.BuildingBlocks
 {
-    internal class ConstructorManifold<T> : BuildingBlock, IPipelineConstructorMany<T>, IPipelineConstructorManyInitializer<T> where T : class
+    internal class ConstructorManifold<T> : BuildingBlock, IPipelineConstructorMany<T>, IPipelineConstructorManyTarget<T>, IPipelineConstructorManyInitializer<T> where T : PipelineComponent
     {
-        private ConstructorManifoldStub<T> _constructorManifold;
-
+        private readonly ConstructorManifoldStub<T> _constructorManifold;
+        private readonly int _count;
         private bool _blackhole = true;
 
-        public ConstructorManifold(PipelineComponent component) : base(component)
+        public ConstructorManifold(Pipeline pipeline, int count) : base(pipeline)
         {
-        }
-
-        public ConstructorManifold(Pipeline pipeline) : base(pipeline)
-        {
+            _count = count;
+            _constructorManifold = new ConstructorManifoldStub<T>(Component);
         }
 
         protected override void AttachPipeline(Pipeline pipeline)
         {
             if (_blackhole)
-                throw new NotAttachedException("ConstructorMany is nonfunctional. (ctor without container)");
-
-            // Create tx socket
+                throw new NotAttachedException("ConstructorManifold is nonfunctional. (ctor without container)");
+        
             pipeline.AddCtorManifold(_constructorManifold);
         }
 
@@ -35,22 +32,17 @@ namespace Pipes.BuildingBlocks
             _blackhole = false;
             if (proxy != default(Stub))
             {
-                throw ProxyAlreadyAssignedException.Exception<T>("Attempted to reuse multi-construction stub.");
+                throw ProxyAlreadyAssignedException.ForType<T>("Attempted to reuse multi-construction stub.");
             }
 
-            _constructorManifold = new ConstructorManifoldStub<T>(Component) {IsSupportClass = true};
             proxy = _constructorManifold;
 
             return this;
         }
 
-        public IPipelineConstructorMany<T> Using(Func<T> ctor)
+        public IPipelineConstructorManyTarget<T> Using(Func<T> ctor)
         {
             _blackhole = false;
-            if (ctor == default(Func<T>))
-            {
-                _constructorManifold = new ConstructorManifoldStub<T>(Component);
-            }
 
             _constructorManifold.Add(new ConstructorStub<T>(Component, ctor));
 

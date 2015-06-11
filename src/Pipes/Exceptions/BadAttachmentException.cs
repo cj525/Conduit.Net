@@ -9,7 +9,7 @@ namespace Pipes.Exceptions
         {
         }
 
-        public static BadAttachmentException Exception<T>(string message)
+        public static BadAttachmentException ForType<T>(string message)
         {
             return new BadAttachmentException(message, typeof (T));
         }

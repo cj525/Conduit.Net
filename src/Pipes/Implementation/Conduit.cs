@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Pipes.Abstraction;
@@ -14,6 +15,8 @@ namespace Pipes.Implementation
         public static int DefaultBufferLength = 1000;
 
         private MessageQueueThread _queueThread;
+        private MessageQueueThread[] _queueThreads;
+        private int _poolPtr;
 
 
         internal ReceiverStub Receiver;
@@ -94,6 +97,20 @@ namespace Pipes.Implementation
                 }
                 else
                 {
+                    if (_queueThreads == null)
+                        lock (Receiver)
+                        {
+                            if (_queueThreads == null)
+                                _queueThreads = Enumerable.Range(0, 2).Select(_ => new MessageQueueThread(Target.ContainedType.Name + " " + _)).ToArray();
+                        }
+
+                    lock (_queueThreads)
+                    {
+                        _queueThreads[_poolPtr].Enqueue( () => Receiver.Receive(message));
+                        if (++_poolPtr == _queueThreads.Length)
+                            _poolPtr = 0;
+                    }
+                        
                     ThreadPool.QueueUserWorkItem(state => Receiver.Receive(message));
                 }
             }

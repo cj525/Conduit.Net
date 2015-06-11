@@ -13,42 +13,32 @@ namespace Pipes.Interfaces
 
     public interface IPipelineConstruction
     {
-        IPipelineConstructor<T> Constructs<T>(Func<T> ctor) where T : class;
+        IPipelineConstructor<T> Constructs<T>(Func<T> ctor) where T : PipelineComponent;
 
-        IPipelineConstructorManyBase<T> ConstructsMany<T>() where T : class;
+        IPipelineConstructorMany<T> ConstructsMany<T>(int count) where T : PipelineComponent;
     }
-
 
     public interface IPipelineConstructorBase
     {
         void Into(ref Stub proxy);
     }
 
-    public interface IPipelineSupportConstructor<T> where T : class
+    public interface IPipelineConstructor<T> : IPipelineConstructorBase where T : class
     {
-        void Once();
-    }
-
-    public interface IPipelineConstructor<T> : IPipelineConstructorBase, IPipelineSupportConstructor<T> where T : class
-    {
-        /// <summary>
-        /// As opposed to new every time or once-forever (not supported).
-        /// New every time is the default behavior.
-        /// </summary>
-        /// <returns></returns>
-        IPipelineSupportConstructor<T> Using(ref Func<T> ctor);
+        void Using(ref Func<T> ctor);
     }
 
 
     // TODO: We still supporting Many?
-    public interface IPipelineConstructorManyBase<T> where T : class
-    {
-        IPipelineConstructorMany<T> Using(Func<T> ctor);
-    }
-
-    public interface IPipelineConstructorMany<T> : IPipelineConstructorManyBase<T> where T : class
+    public interface IPipelineConstructorManyTarget<out T> where T : class
     {
         IPipelineConstructorManyInitializer<T> Into(ref Stub proxy);
+    }
+
+    public interface IPipelineConstructorMany<T> where T : class
+    {
+        IPipelineConstructorManyTarget<T> Using(Func<T> ctor);
+        
     }
 
     public interface IPipelineConstructorManyInitializer<out T> where T : class
@@ -62,7 +52,7 @@ namespace Pipes.Interfaces
         void WhichTransmitsTo(Stub target);
     }
 
-    public interface IPipelineComponentBuilder : IPipelineConstruction, IPipelineComponentEmissionBuilder
+    public interface IPipelineComponentBuilder : IPipelineComponentEmissionBuilder
     {
         IPipelineMessageReceiver<T> Receives<T>() where T : class;
 

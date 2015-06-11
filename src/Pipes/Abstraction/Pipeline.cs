@@ -383,12 +383,12 @@ namespace Pipes.Abstraction
         }
 
 
-        internal void AddCtor<T>(ConstructorStub<T> ctor)
+        internal void AddCtor<T>(ConstructorStub<T> ctor) where T : PipelineComponent
         {
             _ctors.Add(ctor);
         }
 
-        internal void AddCtorManifold<T>(ConstructorManifoldStub<T> ctors)
+        internal void AddCtorManifold<T>(ConstructorManifoldStub<T> ctors) where T : PipelineComponent
         {
             _ctors.Add(ctors);
         }
@@ -408,24 +408,20 @@ namespace Pipes.Abstraction
             _receivers.Add(rx);
         }
 
-        internal void AddDisposable(IDisposable disposable)
-        {
-            Console.WriteLine("*** Fix pipeline disposables ***");
-            //throw new NotImplementedException();
-        }
-
         internal void AddTubes(List<Conduit> tubes)
         {
             _tubes.AddRange(tubes);
         }
 
 
+        // ReSharper disable once MemberCanBePrivate.Global
         internal void Emit<T>(PipelineComponent sender, T data) where T : class
         {
             var message = new PipelineMessage<T>(this, sender, data);
             EmitMessage(message);
         }
 
+        // ReSharper disable once MemberCanBePrivate.Global
         internal async Task EmitAsync<T>(PipelineComponent sender, T data) where T : class
         {
             var message = new PipelineMessage<T>(this, sender, data);
@@ -436,12 +432,6 @@ namespace Pipes.Abstraction
         #endregion
 
         #region - Declaration -
-
-        // ReSharper disable once MemberCanBeProtected.Global
-        public static Func<T> Constructor<T>()
-        {
-            return default(Func<T>);
-        }
 
         // ReSharper disable once MemberCanBeProtected.Global
         public static Stub Component
