@@ -113,7 +113,7 @@ namespace Pipes.Abstraction
         private void GenerateAndConnectConduits()
         {
             // Gather sender's types
-            var senderTypes = _components.Select(component => component.GetType());
+            var senderTypes = _components.Select(component => component.GetType()).Distinct();
 
             // For each sender, including null (tap), create conduit for each type of sendable message
             foreach (var senderType in senderTypes)
@@ -131,7 +131,8 @@ namespace Pipes.Abstraction
                 {
                     // Localize loop variable
                     var ltx = tx;
-                    foreach (var rx in _receivers.Where(rx => rx.Component != null && rx.ContainedType.IsAssignableFrom(ltx.ContainedType)))
+                    var rxs = _receivers.Where(rx => rx.Component != null && rx.ContainedType.IsAssignableFrom(ltx.ContainedType)).ToArray();
+                    foreach (var rx in rxs)
                     {
                         // Localize loop variable
                         var lrx = rx;
@@ -143,6 +144,22 @@ namespace Pipes.Abstraction
                             senderSlot.Add(messageType, new List<Conduit>());
 
                         var messageSlot = senderSlot[messageType];
+
+                        // If this is a manifold, create/use manifold entry
+                        if (tCtor is ConstructorManifoldStub)
+                        {
+                            var manifolds = messageSlot.Where(slot => slot.Target == tCtor && slot.Source == sCtor).ToArray();
+                            if (!manifolds.Any())
+                            {
+                                var conduit = new Conduit(sCtor, tCtor);
+                                messageSlot.Add(conduit);
+                                messageSlot = conduit.AsManifold();
+                            }
+                            else
+                            {
+                                messageSlot = manifolds.First().AsManifold();
+                            }
+                        }
 
                         // Find declared conduits
                         var existingTubes = _tubes.Where(tube => tube.Source == sCtor && tube.Target == tCtor && (tube.MessageType == null || tube.MessageType == messageType)).ToArray();
@@ -163,12 +180,12 @@ namespace Pipes.Abstraction
                                 throw new NotSupportedException("Under specified conduit.. no matching routes");
 
                             // Tube exists, use it! (well, copy it first)..  (now it's promote to conduit)
-                            messageSlot.Add(existingTubes.First().Procreate(rx));
+                            messageSlot.Add(existingTubes.First().Clone(rx));
                         }
                         else
                         {
                             // And add said conduit
-                            senderSlot[messageType].Add(new Conduit(sCtor, tCtor, messageType) { Receiver = rx });
+                            messageSlot.Add(new Conduit(sCtor, tCtor, messageType) { Receiver = rx });
                         }
                     }
                 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Pipes.Abstraction;
 using Pipes.Interfaces;
@@ -15,6 +16,22 @@ namespace Pipes.Stubs
         {
             return Task.FromResult(false);
         }
+
+        public class Manifold : ReceiverStub
+        {
+            internal List<ReceiverStub> Receivers = new List<ReceiverStub>();
+
+            protected Manifold(PipelineComponent component, Type containedType) : base(component, containedType)
+            {
+            
+            }
+
+            internal override Task Receive(IPipelineMessage message)
+            {
+                return base.Receive(message);
+            }
+        }
+
 
     }
 

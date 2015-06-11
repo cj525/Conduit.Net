@@ -9,7 +9,7 @@ namespace Pipes.Implementation
     {
         private readonly object _lockObject = new { };
         private readonly AutoResetEvent _signal;
-        private readonly AutoResetEvent _reverseSignal;
+        private readonly ManualResetEventSlim _reverseSignal;
         private readonly ManualResetEventSlim _doneSignal;
         private readonly Thread _thread;
 
@@ -26,7 +26,7 @@ namespace Pipes.Implementation
         {
             _thread = new Thread(ThreadLoop) {IsBackground = true, Name = "Message Queue - " + name};
             _signal = new AutoResetEvent(false);
-            _reverseSignal = new AutoResetEvent(false);
+            _reverseSignal = new ManualResetEventSlim(false);
             _doneSignal = new ManualResetEventSlim(false);
             _workQueue = new Queue<Action>();
             _backBuffer = new Queue<Action>();
@@ -68,7 +68,8 @@ namespace Pipes.Implementation
 
             if (!_quit && queueFull)
             {
-                _reverseSignal.WaitOne();
+                _reverseSignal.Wait();
+                _reverseSignal.Reset();
             }
 
             lock (_lockObject)

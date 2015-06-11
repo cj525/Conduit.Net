@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Data.SqlTypes;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,9 +16,11 @@ namespace Pipes.Implementation
 
         public static int DefaultBufferLength = 1000;
 
+        private List<Conduit> _manifold;
         private MessageQueueThread _queueThread;
         private MessageQueueThread[] _queueThreads;
         private int _poolPtr;
+        private bool _isManifold;
 
 
         internal ReceiverStub Receiver;
@@ -71,23 +75,39 @@ namespace Pipes.Implementation
         }
 
 
-        internal async Task Invoke(IPipelineMessage message)
+        internal List<Conduit> AsManifold()
         {
-            if( Receiver == null )
+            if (_manifold == null)
+            {
+                _manifold = new List<Conduit>();
+                _isManifold = true;
+            }
+            return _manifold;
+        }
+
+        internal Task Invoke(IPipelineMessage message)
+        {
+            if (Receiver == null && !_isManifold)
                 throw new NotAttachedException("Conduit is not attached.");
 
             if (!OffThread)
             {
-                await Receiver.Receive(message);
+                if (Receiver != null)
+                {
+                    return Receiver.Receive(message);
+                }
+
+                var target = _manifold[NextPtr()];
+                return target.Invoke(message);
             }
             else
             {
                 if (!Pooled)
                 {
-                    if( _queueThread == null )
+                    if (_queueThread == null)
                         _queueThread = new MessageQueueThread(Target.ContainedType.Name);
 
-                    _queueThread.Enqueue(WithWait ? () => Receiver.Receive(message).Wait() : (Action)(() => Receiver.Receive(message)));
+                    _queueThread.Enqueue(WithWait ? () => Receiver.Receive(message).Wait() : (Action) (() => Receiver.Receive(message)));
 
                     if (!_queueThread.IsStarted)
                     {
@@ -97,26 +117,55 @@ namespace Pipes.Implementation
                 }
                 else
                 {
-                    if (_queueThreads == null)
-                        lock (Receiver)
-                        {
-                            if (_queueThreads == null)
-                                _queueThreads = Enumerable.Range(0, 2).Select(_ => new MessageQueueThread(Target.ContainedType.Name + " " + _)).ToArray();
-                        }
-
-                    lock (_queueThreads)
+                    if (!_isManifold)
                     {
-                        _queueThreads[_poolPtr].Enqueue( () => Receiver.Receive(message));
-                        if (++_poolPtr == _queueThreads.Length)
-                            _poolPtr = 0;
+                        ThreadPool.QueueUserWorkItem(state => Receiver.Receive(message));
                     }
-                        
-                    ThreadPool.QueueUserWorkItem(state => Receiver.Receive(message));
+                    else
+                    {
+                        var count = _manifold.Count;
+                        if (_queueThreads == null)
+                            lock (_manifold)
+                            {
+                                if (_queueThreads == null)
+                                {
+                                    _queueThreads = Enumerable.Range(0, count).Select(index => new MessageQueueThread(String.Format("{0} {1}/{2}", Target.ContainedType.Name, index, count))).ToArray();
+                                }
+
+                            }
+
+                        lock (_queueThreads)
+                        {
+                            var ptr = NextPtr();
+                            var thread = _queueThreads[ptr];
+                            var target = _manifold[ptr];
+                            
+                            thread.Enqueue(() => target.Invoke(message));
+                        }
+                    }
                 }
+            }
+            return Abstraction.Target.EmptyTask;
+        }
+
+        private void EnqueueOnManifold(IPipelineMessage message)
+        {
+            var target = _manifold[_poolPtr];
+            
+        }
+
+        private int NextPtr()
+        {
+            lock (_manifold)
+            {
+                var result = _poolPtr;
+                if (++_poolPtr == _manifold.Count)
+                    _poolPtr = 0;
+                return result;
             }
         }
 
-        internal Conduit Procreate(ReceiverStub rx)
+        internal Conduit Clone(ReceiverStub rx)
         {
             return new Conduit(Source, Target, MessageType)
             {
@@ -154,5 +203,6 @@ namespace Pipes.Implementation
                 return this;
             }
         }
+
     }
 }

@@ -1,33 +1,33 @@
 using System;
-using System.Collections.Generic;
-using System.Data.Odbc;
 using System.Linq;
 using Pipes.Abstraction;
 using Pipes.Extensions;
 
 namespace Pipes.Stubs
 {
-    public class ConstructorManifoldStub<T> : Stub where T : PipelineComponent
+    public abstract class ConstructorManifoldStub : Stub
     {
-        private readonly int _count;
-        private ConstructorStub<T>[] _contents;
-
-        internal bool IsSupportClass { get; set; }
-
-        public ConstructorManifoldStub(PipelineComponent component, int count) : base(component,typeof(T))
+        protected ConstructorManifoldStub(PipelineComponent component, Type type) : base(component, type)
         {
-            _count = count;
-            _contents = new ConstructorStub<T>[] {};
+            
         }
+    }
+    public class ConstructorManifoldStub<T> : ConstructorManifoldStub where T : PipelineComponent
+    {
+        private readonly ConstructorStub<T>[] _contents;
 
-        internal void Add(ConstructorStub<T> ctor)
+        public ConstructorManifoldStub(PipelineComponent component, int count, Func<T> ctor ) : base(component,typeof(T))
         {
-            _contents = Enumerable.Range(0, _count).Select(_ => ctor).ToArray();
+            _contents = Enumerable
+                .Range(0, count)
+                .Select(_ => new ConstructorStub<T>(component, ctor))
+                .ToArray();
         }
 
         internal override void AttachTo(Pipeline pipeline)
         {
             _contents.Apply(ctor => ctor.AttachTo(pipeline));
+
             base.AttachTo(pipeline);
         }
     }

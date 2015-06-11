@@ -19,7 +19,7 @@ namespace Pipes.BuildingBlocks
 
         public IPipelineConstructorManyTarget<T> Using<T>(Func<T> ctor) where T : PipelineComponent
         {
-            return new ConstructorManifold<T>(_pipeline,_count);
+            return new ConstructorManifold<T>(_pipeline,_count,ctor);
         }
     }
     internal class ConstructorManifold<T> : BuildingBlock, IPipelineConstructorManyTarget<T> where T : PipelineComponent
@@ -27,9 +27,9 @@ namespace Pipes.BuildingBlocks
         private readonly ConstructorManifoldStub<T> _constructorManifold;
         private bool _blackhole = true;
 
-        public ConstructorManifold(Pipeline pipeline, int count) : base(pipeline)
+        public ConstructorManifold(Pipeline pipeline, int count, Func<T> ctor ) : base(pipeline)
         {
-            _constructorManifold = new ConstructorManifoldStub<T>(Component,count);
+            _constructorManifold = new ConstructorManifoldStub<T>(Component, count, ctor);
         }
 
         protected override void AttachPipeline(Pipeline pipeline)
@@ -56,7 +56,7 @@ namespace Pipes.BuildingBlocks
         {
             _blackhole = false;
 
-            _constructorManifold.Add(new ConstructorStub<T>(Component, ctor));
+            
 
             return this;
         }
