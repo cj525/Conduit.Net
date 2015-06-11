@@ -6,16 +6,14 @@ using Pipes.Stubs;
 
 namespace Pipes.BuildingBlocks
 {
-    internal class ConstructorManifold<T> : BuildingBlock, IPipelineConstructorMany<T>, IPipelineConstructorManyTarget<T>, IPipelineConstructorManyInitializer<T> where T : PipelineComponent
+    internal class ConstructorManifold<T> : BuildingBlock, IPipelineConstructorMany<T>, IPipelineConstructorManyTarget<T> where T : PipelineComponent
     {
         private readonly ConstructorManifoldStub<T> _constructorManifold;
-        private readonly int _count;
         private bool _blackhole = true;
 
         public ConstructorManifold(Pipeline pipeline, int count) : base(pipeline)
         {
-            _count = count;
-            _constructorManifold = new ConstructorManifoldStub<T>(Component);
+            _constructorManifold = new ConstructorManifoldStub<T>(Component,count);
         }
 
         protected override void AttachPipeline(Pipeline pipeline)
@@ -27,7 +25,7 @@ namespace Pipes.BuildingBlocks
         }
 
 
-        public IPipelineConstructorManyInitializer<T> Into(ref Stub proxy)
+        public void Into(ref Stub proxy)
         {
             _blackhole = false;
             if (proxy != default(Stub))
@@ -36,8 +34,6 @@ namespace Pipes.BuildingBlocks
             }
 
             proxy = _constructorManifold;
-
-            return this;
         }
 
         public IPipelineConstructorManyTarget<T> Using(Func<T> ctor)
@@ -47,11 +43,6 @@ namespace Pipes.BuildingBlocks
             _constructorManifold.Add(new ConstructorStub<T>(Component, ctor));
 
             return this;
-        }
-
-        public void WhichAreInitializedWith(Action<T> init)
-        {
-            _constructorManifold.SetInitializer(init);
         }
     }
 }

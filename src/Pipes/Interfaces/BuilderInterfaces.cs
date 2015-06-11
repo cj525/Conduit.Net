@@ -32,7 +32,7 @@ namespace Pipes.Interfaces
     // TODO: We still supporting Many?
     public interface IPipelineConstructorManyTarget<out T> where T : class
     {
-        IPipelineConstructorManyInitializer<T> Into(ref Stub proxy);
+        void Into(ref Stub proxy);
     }
 
     public interface IPipelineConstructorMany<T> where T : class
@@ -40,12 +40,6 @@ namespace Pipes.Interfaces
         IPipelineConstructorManyTarget<T> Using(Func<T> ctor);
         
     }
-
-    public interface IPipelineConstructorManyInitializer<out T> where T : class
-    {
-        void WhichAreInitializedWith(Action<T> init);
-    }
-
 
     public interface IPipelineInvocation<out TArgument> // : IPipelineInvocationBase<TArgument>
     {
