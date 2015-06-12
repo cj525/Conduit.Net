@@ -85,5 +85,78 @@ namespace Pipes.Abstraction
                 _builder.Emits<T>();
             }
         }
+
+        protected IObserver<T> ObserveFor<T>() where T : class
+        {
+            return new Observer<T>(this, null, null);
+        }
+
+        protected IObserver<T> ObserveFor<T>(object token) where T : class
+        {
+            return new Observer<T>(this, null, token);
+        }
+
+        protected IObserver<T> ObserveFor<T>(IPipelineMessage message) where T : class
+        {
+            return new Observer<T>(this, message, null);
+        }
+
+        protected IObserver<T> ObserveFor<T>(IPipelineMessage message, object token) where T : class
+        {
+            return new Observer<T>(this, message, token);
+        }
+
+        public class ObservationComplete<T>
+        {
+            public Type Type { get; private set; }
+            public object Token { get; private set; }
+
+            public ObservationComplete(object token)
+            {
+                Type = typeof (T);
+                Token = token;
+            }
+        }
+        private class Observer<T> : IObserver<T> where T : class
+        {
+            private readonly PipelineComponent _component;
+            private readonly IPipelineMessage _message;
+            private readonly object _token;
+
+            public Observer(PipelineComponent component, IPipelineMessage message, object token)
+            {
+                _token = token;
+                _message = message;
+                _component = component;
+            }
+
+            public void OnCompleted()
+            {
+                var complete = new ObservationComplete<T>(_token);
+
+                if (_message != null)
+                    _component.EmitChain(_message, complete);
+                else
+                    _component.Emit(complete);
+            }
+
+            public void OnError(Exception error)
+            {
+                if (_message != null)
+                    _component.EmitChain(_message, error);
+                else
+                    _component.Emit(error);
+            }
+
+            public void OnNext(T value)
+            {
+                if( _message != null )
+                    _component.EmitChain( _message, value );
+                else
+                    _component.Emit(value);
+            }
+
+
+        }
     }
 }
