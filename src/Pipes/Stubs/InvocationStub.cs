@@ -1,12 +1,14 @@
 using System;
+using System.ComponentModel;
 using System.Threading.Tasks;
 using Pipes.Abstraction;
+using Pipes.Types;
 
 namespace Pipes.Stubs
 {
-    public abstract class InvocationStub : Stub
+    public abstract class InvocationStub<TScope> : Stub<TScope>
     {
-        internal Stub Target;
+        internal Stub<TScope> Target;
 
         protected InvocationStub(Type containedType)
             : base(null, containedType)
@@ -15,32 +17,32 @@ namespace Pipes.Stubs
         }
     }
 
-    public class InvocationStub<T> : InvocationStub where T : class
+    public class InvocationStub<T, TScope> : InvocationStub<TScope> where T : class
     {
 
         public InvocationStub() : base(typeof(T))
         {
         }
 
-        private Task Trigger(T data) 
+        private Task Trigger(T data, TScope scope) 
         {
-            var message = new PipelineMessage<T>(Pipeline, Component, data);
+            var message = new PipelineMessage<T,TScope>(Pipeline, Component, data, scope);
             return Pipeline.RouteMessage(message);
         }
 
         // ReSharper disable once RedundantAssignment
-        internal void GetTrigger(ref Action<T> trigger)
+        internal void GetTrigger(ref Action<T,TScope> trigger)
         {
-            trigger = data => Trigger(data);
+            trigger = (data, token) => Trigger(data,token);
         }
 
         // ReSharper disable once RedundantAssignment
-        internal void GetAsyncTrigger(ref Func<T, Task> trigger)
+        internal void GetAsyncTrigger(ref Func<T, TScope, Task> trigger)
         {
             trigger = Trigger;
         }
 
-        internal void SetTarget(Stub target)
+        internal void SetTarget(Stub<TScope> target)
         {
             // IsConstructed = false
             Target = target;

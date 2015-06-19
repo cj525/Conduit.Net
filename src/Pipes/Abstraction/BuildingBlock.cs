@@ -1,21 +1,23 @@
+using Pipes.Interfaces;
+
 namespace Pipes.Abstraction
 {
-    public abstract class BuildingBlock
+    public abstract class BuildingBlock<TScope>
     {
-        protected readonly PipelineComponent Component;
+        protected readonly IPipelineComponent<TScope> Component;
 
-        protected BuildingBlock(PipelineComponent component)
+        protected BuildingBlock(IPipelineComponent<TScope> component)
         {
             Component = component;
 
             component.OnAttach(AttachPipeline);
         }
 
-        protected BuildingBlock(Pipeline pipeline)
+        protected BuildingBlock(Pipeline<TScope> pipeline)
         {
             pipeline.OnAttach(AttachPipeline);
         }
 
-        protected abstract void AttachPipeline(Pipeline pipeline);
+        protected abstract void AttachPipeline(Pipeline<TScope> pipeline);
     }
 }

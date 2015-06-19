@@ -1,26 +1,27 @@
 using System;
 using System.Threading.Tasks;
 using Pipes.Abstraction;
+using Pipes.Interfaces;
 
 namespace Pipes.Stubs
 {
-    public class TransmitterStub : Stub
+    public class TransmitterStub<TScope> : Stub<TScope>
     {
-        protected TransmitterStub(PipelineComponent component, Type containedType) : base(component,containedType)
+        protected TransmitterStub(IPipelineComponent<TScope> component, Type containedType) : base(component,containedType)
         {
         }
     }
 
-    public class TransmitterStub<T> : TransmitterStub where T : class
+    public class TransmitterStub<T,TScope> : TransmitterStub<TScope> where T : class
     {
-        public TransmitterStub(PipelineComponent component): base(component,typeof(T))
+        public TransmitterStub(IPipelineComponent<TScope> component): base(component, typeof(T))
         {
         }
 
 
-        public Task Emit(T data)
+        public Task Emit(T data, TScope scope)
         {
-            return Pipeline.EmitAsync(Component, data);
+            return Pipeline.EmitAsync(Component, data, scope);
         }
 
 

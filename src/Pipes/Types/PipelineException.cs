@@ -4,18 +4,22 @@ using Pipes.Interfaces;
 
 namespace Pipes.Types
 {
-    public class PipelineException : Exception
+    public class PipelineException<TScope> : Exception 
     {
-        public readonly Exception Exception;
-        public readonly IPipelineMessage PipelineMessage;
+        public Exception Exception { get; private set; }
 
-        private readonly Pipeline _pipeline;
+        public IPipelineMessage<TScope> PipelineMessage { get; private set; }
+        
+        public TScope Scope { get; private set; }
 
-        public PipelineException(Pipeline pipeline, Exception exception, IPipelineMessage pipelineMessage = null)
+        private readonly Pipeline<TScope> _pipeline;
+
+        public PipelineException(Pipeline<TScope> pipeline, Exception exception, TScope scope, IPipelineMessage<TScope> pipelineMessage = null)
         {
             _pipeline = pipeline;
             PipelineMessage = pipelineMessage;
             Exception = exception;
+            Scope = scope;
         }
 
         public void TerminatePipeline()
@@ -23,10 +27,14 @@ namespace Pipes.Types
             _pipeline.Terminate();
         }
 
-        public void Emit<T>(T data) where T : class
+        public void Emit<T>(T data, TScope scope = default(TScope)) where T : class
         {
             var source = PipelineMessage == null ? null : PipelineMessage.Sender;
-            var message = new PipelineMessage<T>(_pipeline, source, data, PipelineMessage);
+            if (scope.Equals(default(TScope)))
+            {
+                scope = Scope;
+            }
+            var message = new PipelineMessage<T,TScope>(_pipeline, source, data, scope, PipelineMessage);
             _pipeline.EmitMessage(message);
         }
     }

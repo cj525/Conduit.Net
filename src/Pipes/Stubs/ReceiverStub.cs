@@ -1,63 +1,59 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Pipes.Abstraction;
 using Pipes.Interfaces;
 
 namespace Pipes.Stubs
 {
-    public abstract class ReceiverStub : Stub
+    public abstract class ReceiverStub<TScope> : Stub<TScope>
     {
-        protected ReceiverStub(PipelineComponent component, Type containedType) : base(component,containedType)
+        protected ReceiverStub(IPipelineComponent<TScope> component, Type containedType) : base(component,containedType)
         {
         }
 
-        internal virtual Task Receive(IPipelineMessage message)
+        [DebuggerHidden]
+        internal virtual Task Receive(IPipelineMessage<TScope> message)
         {
             return Task.FromResult(false);
         }
 
-        public class Manifold : ReceiverStub
+        public class Manifold : ReceiverStub<TScope>
         {
-            internal List<ReceiverStub> Receivers = new List<ReceiverStub>();
+            internal List<ReceiverStub<TScope>> Receivers = new List<ReceiverStub<TScope>>();
 
-            protected Manifold(PipelineComponent component, Type containedType) : base(component, containedType)
+            protected Manifold(PipelineComponent<TScope> component, Type containedType)
+                : base(component, containedType)
             {
             
             }
-
-            internal override Task Receive(IPipelineMessage message)
-            {
-                return base.Receive(message);
-            }
         }
-
-
     }
 
-    public class ReceiverStub<T> : ReceiverStub where T : class
+    public class ReceiverStub<TData,TScope> : ReceiverStub<TScope> where TData : class
     {
-        private Func<IPipelineMessage<T>, Task> _bridge = msg => { throw new NotImplementedException("Pipeline Receiver is not attached"); };
+        private Func<IPipelineMessage<TData, TScope>, Task> _bridge = msg => { throw new NotImplementedException("Pipeline Receiver is not attached"); };
 
-        public ReceiverStub(PipelineComponent component) : base(component, typeof(T))
+        public ReceiverStub(IPipelineComponent<TScope> component) : base(component, typeof(TData))
         {
             Pipeline = null;
         }
 
-        public ReceiverStub(Pipeline pipeline) : this(default(PipelineComponent))
+        public ReceiverStub(Pipeline<TScope> pipeline) : this(default(PipelineComponent<TScope>))
         {
             Pipeline = pipeline;
         }
 
-
-        internal override Task Receive(IPipelineMessage message)
+        [DebuggerHidden]
+        internal override Task Receive(IPipelineMessage<TScope> message)
         {
             //Console.WriteLine("- Receiving {0} on Thread {1}", ((IPipelineMessage<object>)message).Data.GetType().Name, Thread.CurrentThread.ManagedThreadId);
 
             // async keyword not needed, chain maintained on Task
             try
             {
-                var pipelineMessage = message as IPipelineMessage<T>;
+                var pipelineMessage = message as IPipelineMessage<TData, TScope>;
                 if (pipelineMessage == null)
                     throw new Exception("Cast failure in bridge");
                 return _bridge(pipelineMessage);
@@ -72,7 +68,7 @@ namespace Pipes.Stubs
             }
         }
 
-        internal void Calls(Func<IPipelineMessage<T>, Task> bridge)
+        internal void Calls(Func<IPipelineMessage<TData, TScope>, Task> bridge)
         {
             _bridge = bridge;
         }

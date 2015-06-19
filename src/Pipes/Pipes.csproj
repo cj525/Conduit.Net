@@ -65,7 +65,7 @@
     <Compile Include="Implementation\Builder.cs" />
     <Compile Include="Abstraction\PipelineComponent.cs" />
     <Compile Include="Types\PipelineException.cs" />
-    <Compile Include="Abstraction\PipelineMessage.cs" />
+    <Compile Include="Types\PipelineMessage.cs" />
     <Compile Include="Abstraction\Stub.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Types\MessageTap.cs" />

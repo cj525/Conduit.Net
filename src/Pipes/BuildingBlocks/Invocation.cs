@@ -7,9 +7,9 @@ using Pipes.Stubs;
 
 namespace Pipes.BuildingBlocks
 {
-    internal class Invocation<T> : BuildingBlock, IPipelineInvocation<T> where T : class
+    internal class Invocation<TData, TScope> : BuildingBlock<TScope>, IPipelineInvocation<TScope> where TData : class
     {
-        private readonly InvocationStub<T> _proxy;
+        private readonly InvocationStub<TData,TScope> _proxy;
         private bool _blackhole = true;
 
         //public Invocation(PipelineComponent component, ref Action<T> trigger) : base(component)
@@ -24,19 +24,19 @@ namespace Pipes.BuildingBlocks
         //    _proxy.GetAsyncTrigger(ref trigger);
         //}
 
-        public Invocation(Pipeline pipeline, ref Action<T> trigger) : base(pipeline)
+        public Invocation(Pipeline<TScope> pipeline, ref Action<TData,TScope> trigger) : base(pipeline)
         {
-            _proxy = new InvocationStub<T>();
+            _proxy = new InvocationStub<TData, TScope>();
             _proxy.GetTrigger(ref trigger);
         }
 
-        public Invocation(Pipeline pipeline, ref Func<T, Task> trigger) : base(pipeline)
+        public Invocation(Pipeline<TScope> pipeline, ref Func<TData, TScope, Task> trigger) : base(pipeline)
         {
-            _proxy = new InvocationStub<T>();
+            _proxy = new InvocationStub<TData, TScope>();
             _proxy.GetAsyncTrigger(ref trigger);
         }
 
-        protected override void AttachPipeline(Pipeline pipeline)
+        protected override void AttachPipeline(Pipeline<TScope> pipeline)
         {
             if (_blackhole)
                 throw new NotAttachedException("Invocation is black-hole. (no receiver)");
@@ -45,7 +45,7 @@ namespace Pipes.BuildingBlocks
             pipeline.AddInvocation(_proxy);
         }
 
-        public void WhichTransmitsTo(Stub target)
+        public void WhichTransmitsTo(Stub<TScope> target)
         {
             _blackhole = false;
             _proxy.SetTarget(target);

@@ -6,20 +6,20 @@ using Pipes.Stubs;
 
 namespace Pipes.BuildingBlocks
 {
-    internal class Constructor<T> : BuildingBlock, IPipelineConstructor<T> where T : PipelineComponent
+    internal class Constructor<TComponent, TScope> : BuildingBlock<TScope>, IPipelineConstructor<TScope> where TComponent : IPipelineComponent<TScope>
     {
-        private readonly Func<T> _ctor;
+        private readonly Func<TComponent> _ctor;
 
-        private ConstructorStub<T> _constructor;
+        private ConstructorStub<TComponent,TScope> _constructor;
 
         private bool _blackhole = true;
 
-        public Constructor(Pipeline pipeline, Func<T> ctor) : base(pipeline)
+        public Constructor(Pipeline<TScope> pipeline, Func<TComponent> ctor) : base(pipeline)
         {
             _ctor = ctor;
         }
 
-        protected override void AttachPipeline(Pipeline pipeline)
+        protected override void AttachPipeline(Pipeline<TScope> pipeline)
         {
             if (_blackhole)
                 throw new NotAttachedException("Constructor is nonfunctional. (ctor without container)");
@@ -27,15 +27,15 @@ namespace Pipes.BuildingBlocks
             pipeline.AddCtor(_constructor);
         }
 
-        public void Into(ref Stub proxy)
+        public void Into(ref Stub<TScope> proxy)
         {
             _blackhole = false;
-            if (proxy != default(Stub))
+            if (proxy != default(Stub<TScope>))
             {
-                throw ProxyAlreadyAssignedException.ForType<T>("Attempted to reuse construction stub.");
+                throw ProxyAlreadyAssignedException.ForType<TComponent>("Attempted to reuse construction stub.");
             }
 
-            _constructor = new ConstructorStub<T>(Component, _ctor);
+            _constructor = new ConstructorStub<TComponent,TScope>(Component, _ctor);
             proxy = _constructor;
         }
     }

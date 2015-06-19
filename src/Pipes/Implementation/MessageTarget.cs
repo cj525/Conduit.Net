@@ -6,11 +6,11 @@ using Pipes.Stubs;
 
 namespace Pipes.Implementation
 {
-    internal class MessageTarget<T> : Target where T : class
+    internal class MessageTarget<T,TScope> : Target where T : class
     {
-        private Func<IPipelineMessage<T>, Task> _bridge;
+        private Func<IPipelineMessage<T, TScope>, Task> _bridge;
 
-        internal void Attach(ReceiverStub<T> rx)
+        internal void Attach(ReceiverStub<T, TScope> rx)
         {
             rx.Calls(_bridge);
         }
@@ -33,7 +33,7 @@ namespace Pipes.Implementation
             };
         }
 
-        internal void Set(Action<IPipelineMessage<T>> action)
+        internal void Set(Action<IPipelineMessage<T, TScope>> action)
         {
             _bridge = msg =>
             {
@@ -52,7 +52,7 @@ namespace Pipes.Implementation
             _bridge = msg => asyncAction(msg.Data);
         }
 
-        internal void Set(Func<IPipelineMessage<T>, Task> asyncAction)
+        internal void Set(Func<IPipelineMessage<T, TScope>, Task> asyncAction)
         {
             _bridge = asyncAction;
         }

@@ -1,18 +1,19 @@
 using System;
 using Pipes.Abstraction;
+using Pipes.Interfaces;
 
 namespace Pipes.Stubs
 {
-    public class ConstructorStub<T> : Stub where T : PipelineComponent
+    public class ConstructorStub<TComponent, TScope> : Stub<TScope> where TComponent : IPipelineComponent<TScope>
     {
-        private readonly Lazy<T> _instance;
+        private readonly Lazy<TComponent> _instance;
 
-        public ConstructorStub(PipelineComponent component, Func<T> ctor) : base(component, typeof(T)) 
+        public ConstructorStub(IPipelineComponent<TScope> component, Func<TComponent> ctor) : base(component, typeof(TComponent)) 
         {
-            _instance = new Lazy<T>(ctor);
+            _instance = new Lazy<TComponent>(ctor);
         }
 
-        internal override void AttachTo(Pipeline pipeline)
+        internal override void AttachTo(Pipeline<TScope> pipeline)
         {
             pipeline.AttachComponent(_instance.Value);
 

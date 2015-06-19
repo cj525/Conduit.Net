@@ -1,29 +1,30 @@
 using Pipes.Abstraction;
+using Pipes.Interfaces;
 using Pipes.Stubs;
 
 namespace Pipes.BuildingBlocks
 {
-    internal class Transmitter<T> : BuildingBlock where T : class
+    internal class Transmitter<T,TScope> : BuildingBlock<TScope> where T : class
     {
-        private readonly TransmitterStub<T> _tx;
+        private readonly TransmitterStub<T,TScope> _tx;
 
-        private Transmitter(PipelineComponent component) : base(component)
+        private Transmitter(IPipelineComponent<TScope> component) : base(component)
         {
-            _tx = new TransmitterStub<T>(component);
+            _tx = new TransmitterStub<T,TScope>(component);
         }
 
-        protected override void AttachPipeline(Pipeline pipeline)
+        protected override void AttachPipeline(Pipeline<TScope> pipeline)
         {
             // Create tx socket
             pipeline.AddTx(_tx, Component);
         }
 
-        internal static void AttachTo(PipelineComponent component)
+        internal static void AttachTo(IPipelineComponent<TScope> component)
         {
             // Although this is never used, the base class hooks up this up to the component
             // And that is needed to ensure routable messages from pipeline describers
             // ReSharper disable once ObjectCreationAsStatement
-            new Transmitter<T>(component);
+            new Transmitter<T,TScope>(component);
         }
     }
 }

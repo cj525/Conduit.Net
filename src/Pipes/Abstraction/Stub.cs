@@ -6,22 +6,22 @@ using Pipes.Interfaces;
 
 namespace Pipes.Abstraction
 {
-    public abstract class Stub : IPipelineConnector
+    public abstract class Stub<TScope> : IPipelineConnector<TScope>
     {
-        protected Pipeline Pipeline;
+        protected Pipeline<TScope> Pipeline;
 
         protected internal readonly Type ContainedType;
-        protected internal PipelineComponent Component;
+        protected internal readonly IPipelineComponent<TScope> Component;
 
-        private readonly List<Conduit> _tubes = new List<Conduit>();
+        private readonly List<Conduit<TScope>> _tubes = new List<Conduit<TScope>>();
 
-        protected Stub(PipelineComponent component, Type containedType)
+        protected Stub(IPipelineComponent<TScope> component, Type containedType)
         {
             Component = component;
             ContainedType = containedType;
         }
 
-        internal virtual void AttachTo(Pipeline pipeline)
+        internal virtual void AttachTo(Pipeline<TScope> pipeline)
         {
             Pipeline = pipeline;
 
@@ -29,67 +29,67 @@ namespace Pipes.Abstraction
                 pipeline.AddTubes(_tubes);
         }
 
-        public IPipelineConnectorAsync SendsMessagesTo(Stub target)
+        public IPipelineConnectorAsync SendsMessagesTo(Stub<TScope> target)
         {
             return AddGenericConduit(target);
         }
 
 
-        public IPipelineMessageSingleTarget<T> SendsMessage<T>() where T : class
+        public IPipelineMessageSingleTarget<TScope> SendsMessage<T>() where T : class
         {
             return AddTypedConduit<T>();
         }
 
-        public IPipelineMessageChain HasPrivateChannel()
+        public IPipelineMessageChain<TScope> HasPrivateChannel()
         {
             return new PrivateTube(this);
         }
 
         public IPipelineConnectorAsync BroadcastsAllMessages()
         {
-            var conduit = new Conduit(this, null);
+            var conduit = new Conduit<TScope>(this, null);
             _tubes.Add(conduit);
             return conduit;
         }
 
         public IPipelineConnectorAsync BroadcastsAllMessagesPrivately()
         {
-            var conduit = new Conduit(this, null) {IsPrivate = true};
+            var conduit = new Conduit<TScope>(this, null) { IsPrivate = true };
             _tubes.Add(conduit);
             return conduit;
         }
 
-        private IPipelineConnectorAsync AddGenericConduit(Stub target, bool isPrivate = false)
+        private IPipelineConnectorAsync AddGenericConduit(Stub<TScope> target, bool isPrivate = false)
         {
-            var conduit = new Conduit(this, target) { IsPrivate = isPrivate };
+            var conduit = new Conduit<TScope>(this, target) { IsPrivate = isPrivate };
             _tubes.Add(conduit);
             return conduit;
         }
 
-        private IPipelineMessageSingleTarget<T> AddTypedConduit<T>(bool isPrivate = false) where T : class
+        private IPipelineMessageSingleTarget<TScope> AddTypedConduit<T>(bool isPrivate = false) where T : class
         {
             // Create partial conduit
-            var conduit = new Conduit.Partial<T>(this) { IsPrivate = isPrivate };
+            var conduit = new Conduit<TScope>.Partial<T>(this) { IsPrivate = isPrivate };
             _tubes.Add(conduit);
 
             return conduit;
         }
 
-        private class PrivateTube : IPipelineMessageChain
+        private class PrivateTube : IPipelineMessageChain<TScope>
         {
-            private readonly Stub _stub;
+            private readonly Stub<TScope> _stub;
 
-            internal PrivateTube(Stub stub)
+            internal PrivateTube(Stub<TScope> stub)
             {
                 _stub = stub;
             }
 
-            public IPipelineConnectorAsync WhichSendsMessagesTo(Stub target)
+            public IPipelineConnectorAsync WhichSendsMessagesTo(Stub<TScope> target)
             {
                 return _stub.AddGenericConduit(target, true);
             }
 
-            public IPipelineMessageSingleTarget<T> WhichSendsMessage<T>() where T : class
+            public IPipelineMessageSingleTarget<TScope> WhichSendsMessage<T>() where T : class
             {
                 return _stub.AddTypedConduit<T>(true);
             }

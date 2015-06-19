@@ -6,22 +6,22 @@ using Pipes.Interfaces;
 
 namespace Pipes.Implementation
 {
-    internal class Builder : IPipelineBuilder, IPipelineComponentBuilder
+    internal class Builder<TScope> : IPipelineBuilder<TScope>, IPipelineComponentBuilder<TScope>
     {
-        private readonly PipelineComponent _component;
-        private readonly Pipeline _pipeline;
+        private readonly IPipelineComponent<TScope> _component;
+        private readonly Pipeline<TScope> _pipeline;
 
-        internal Builder(PipelineComponent component)
+        internal Builder(IPipelineComponent<TScope> component)
         {
             _component = component;
         }
 
-        internal Builder(Pipeline pipeline)
+        internal Builder(Pipeline<TScope> pipeline)
         {
             _pipeline = pipeline;
         }
 
-        public IPipelineInvocation<T> IsInvokedBy<T>(ref Action<T> trigger) where T : class
+        public IPipelineInvocation<TScope> IsInvokedBy<TData>(ref Action<TData, TScope> trigger) where TData : class
         {
             if (_component != null)
             {
@@ -29,10 +29,10 @@ namespace Pipes.Implementation
                 //return new Invocation<T>(_component, ref trigger);
             }
             
-            return new Invocation<T>(_pipeline, ref trigger);
+            return new Invocation<TData,TScope>(_pipeline, ref trigger);
         }
 
-        public IPipelineInvocation<T> IsInvokedAsyncBy<T>(ref Func<T, Task> trigger) where T : class
+        public IPipelineInvocation<TScope> IsInvokedAsyncBy<TData>(ref Func<TData, TScope, Task> trigger) where TData : class
         {
             if (_component != null)
             {
@@ -40,46 +40,46 @@ namespace Pipes.Implementation
                 //return new Invocation<T>(_component, ref trigger);
             }
 
-            return new Invocation<T>(_pipeline, ref trigger);
+            return new Invocation<TData,TScope>(_pipeline, ref trigger);
         }
 
 
-        public IPipelineConstructor<T> Constructs<T>(Func<T> ctor) where T : PipelineComponent
+        public IPipelineConstructor<TScope> Constructs<TComponent>(Func<TComponent> ctor) where TComponent : IPipelineComponent<TScope>
         {
             if (_component != null)
             {
                 throw new NotSupportedException("Only the pipeline may declare a constructor.");
             }
 
-            return new Constructor<T>(_pipeline, ctor);
+            return new Constructor<TComponent,TScope>(_pipeline, ctor);
         }
 
-        public IPipelineConstructorMany ConstructsMany(int count)
+        public IPipelineConstructorMany<TScope> ConstructsMany(int count)
         {
             if (_component != null)
             {
                 throw new NotSupportedException("Only the pipeline may declare a constructor manifold.");
             }
 
-            return new ConstructorManifold(_pipeline,count);
+            return new ConstructorManifold<TScope>(_pipeline,count);
         }
 
-        public IPipelineComponentEmissionBuilder Emits<T>() where T : class
+        public IPipelineComponentEmissionBuilder<TScope> Emits<T>() where T : class
         {
             if (_component == null)
                 throw new ApplicationException("Can't create emitter on pipeline.");
 
-            Transmitter<T>.AttachTo(_component);
+            Transmitter<T,TScope>.AttachTo(_component);
             
             return this;
         }
 
-        public IPipelineMessageReceiver<T> Receives<T>() where T : class
+        public IPipelineMessageReceiver<T,TScope> Receives<T>() where T : class
         {
             if (_component == null)
                 throw new ApplicationException("Can't create receiver on pipeline.");
             
-            return new Receiver<T>(_component);
+            return new Receiver<T,TScope>(_component);
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlTypes;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,23 +12,23 @@ using Pipes.Stubs;
 
 namespace Pipes.Implementation
 {
-    internal class Conduit : IPipelineConnectorAsync, IPipelineConnectorAsyncBuffered
+    internal class Conduit<TScope> : IPipelineConnectorAsync, IPipelineConnectorAsyncBuffered
     {
 
         public static int DefaultBufferLength = 1000;
 
-        private List<Conduit> _manifold;
+        private List<Conduit<TScope>> _manifold;
         private MessageQueueThread _queueThread;
         private MessageQueueThread[] _queueThreads;
         private int _poolPtr;
         private bool _isManifold;
 
 
-        internal ReceiverStub Receiver;
+        internal ReceiverStub<TScope> Receiver;
 
-        internal Stub Source { get; set; }
+        internal Stub<TScope> Source { get; set; }
 
-        internal Stub Target { get; set; }
+        internal Stub<TScope> Target { get; set; }
 
         internal Type MessageType { get; set; }
 
@@ -41,7 +42,7 @@ namespace Pipes.Implementation
         internal int QueueLength { get; set; }
 
 
-        public Conduit(Stub source, Stub target, Type messageType = default(Type))
+        public Conduit(Stub<TScope> source, Stub<TScope> target, Type messageType = default(Type))
         {
             Target = target;
             Source = source;
@@ -75,17 +76,18 @@ namespace Pipes.Implementation
         }
 
 
-        internal List<Conduit> AsManifold()
+        internal List<Conduit<TScope>> AsManifold()
         {
             if (_manifold == null)
             {
-                _manifold = new List<Conduit>();
+                _manifold = new List<Conduit<TScope>>();
                 _isManifold = true;
             }
             return _manifold;
         }
 
-        internal Task Invoke(IPipelineMessage message)
+        [DebuggerHidden]
+        internal Task Invoke(IPipelineMessage<TScope> message)
         {
             if (Receiver == null && !_isManifold)
                 throw new NotAttachedException("Conduit is not attached.");
@@ -148,7 +150,7 @@ namespace Pipes.Implementation
             return Abstraction.Target.EmptyTask;
         }
 
-        private void EnqueueOnManifold(IPipelineMessage message)
+        private void EnqueueOnManifold(IPipelineMessage<TScope> message)
         {
             var target = _manifold[_poolPtr];
             
@@ -165,9 +167,9 @@ namespace Pipes.Implementation
             }
         }
 
-        internal Conduit Clone(ReceiverStub rx)
+        internal Conduit<TScope> Clone(ReceiverStub<TScope> rx)
         {
-            return new Conduit(Source, Target, MessageType)
+            return new Conduit<TScope>(Source, Target, MessageType)
             {
                 IsPrivate = IsPrivate,
                 MessageType = MessageType,
@@ -190,13 +192,13 @@ namespace Pipes.Implementation
             _queueThread.Stop();
         }
 
-        internal class Partial<T> : Conduit, IPipelineMessageSingleTarget<T> where T : class
+        internal class Partial<T> : Conduit<TScope>, IPipelineMessageSingleTarget<TScope> where T : class
         {
-            public Partial(Stub source) : base(source, null, typeof(T))
+            public Partial(Stub<TScope> source) : base(source, null, typeof(T))
             {
             }
 
-            public IPipelineConnectorAsync To(Stub target)
+            public IPipelineConnectorAsync To(Stub<TScope> target)
             {
                 Target = target;
 

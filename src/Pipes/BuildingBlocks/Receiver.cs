@@ -8,20 +8,20 @@ using Pipes.Stubs;
 
 namespace Pipes.BuildingBlocks
 {
-    internal class Receiver<T> : BuildingBlock, IPipelineMessageReceiver<T> where T : class
+    internal class Receiver<TData,TScope> : BuildingBlock<TScope>, IPipelineMessageReceiver<TData,TScope> where TData : class
     {
-        private readonly ReceiverStub<T> _receiver;
-        private readonly MessageTarget<T> _messageTarget;
+        private readonly ReceiverStub<TData,TScope> _receiver;
+        private readonly MessageTarget<TData,TScope> _messageTarget;
 
         private bool _blackhole = true;
 
-        public Receiver(PipelineComponent component) : base(component)
+        public Receiver(IPipelineComponent<TScope> component) : base(component)
         {
-            _receiver = new ReceiverStub<T>(component);
-            _messageTarget = new MessageTarget<T>();
+            _receiver = new ReceiverStub<TData,TScope>(component);
+            _messageTarget = new MessageTarget<TData,TScope>();
         }
 
-        protected override void AttachPipeline(Pipeline pipeline)
+        protected override void AttachPipeline(Pipeline<TScope> pipeline)
         {
             if (_blackhole)
                 throw new NotAttachedException("Receiver is black-hole. (rx without delegate)");
@@ -40,13 +40,13 @@ namespace Pipes.BuildingBlocks
             _messageTarget.Set(action);
         }
 
-        public void WhichUnwrapsAndCalls(Action<T> action)
+        public void WhichUnwrapsAndCalls(Action<TData> action)
         {
             _blackhole = false;
             _messageTarget.Set(action);
         }
 
-        public void WhichCalls(Action<IPipelineMessage<T>> action)
+        public void WhichCalls(Action<IPipelineMessage<TData,TScope>> action)
         {
             _blackhole = false;
             _messageTarget.Set(action);
@@ -58,13 +58,13 @@ namespace Pipes.BuildingBlocks
             _messageTarget.Set(asyncAction);
         }
 
-        public void WhichUnwrapsAndCallsAsync(Func<T, Task> asyncAction)
+        public void WhichUnwrapsAndCallsAsync(Func<TData, Task> asyncAction)
         {
             _blackhole = false;
             _messageTarget.Set(asyncAction);
         }
 
-        public void WhichCallsAsync(Func<IPipelineMessage<T>, Task> asyncAction)
+        public void WhichCallsAsync(Func<IPipelineMessage<TData,TScope>, Task> asyncAction)
         {
             _blackhole = false;
             _messageTarget.Set(asyncAction);
