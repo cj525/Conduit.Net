@@ -307,7 +307,8 @@ namespace Pipes.Abstraction
                     return Task.WhenAll(targets.Select(each => each.Invoke(message)));
                 }
 
-                return targets[0].Invoke(message);
+                (targets[0].Invoke(message)).Wait();
+                return Target.EmptyTask;
             }
             // ReSharper disable once UnusedVariable
             catch (PipelineException<TScope> exception)
@@ -368,7 +369,7 @@ namespace Pipes.Abstraction
         [DebuggerHidden]
         public void EmitMessage<T>(IPipelineMessage<T,TScope> message) where T : class
         {
-            RouteMessage(message);
+            RouteMessage(message).Wait();
         }
 
         [DebuggerHidden]
