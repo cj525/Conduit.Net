@@ -300,7 +300,10 @@ namespace Pipes.Abstraction
             try
             {
                 if (targets.Length == 0)
+                {
                     await Target.EmptyTask;
+                    return;
+                }
 
                 if (targets.Length > 1)
                 {
