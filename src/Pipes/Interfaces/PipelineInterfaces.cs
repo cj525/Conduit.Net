@@ -19,7 +19,7 @@ namespace Pipes.Interfaces
 
     public interface IPipelineMessage<TScope>
     {
-        TScope Scope { get; }
+        TScope Context { get; }
 
         IPipelineComponent<TScope> Sender { get; }
 

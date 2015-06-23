@@ -17,14 +17,14 @@ namespace Pipes.Types
 
         public IEnumerable<IPipelineMessage<TScope>> Stack { get; private set; }
 
-        public TScope Scope { get; private set; }
+        public TScope Context { get; private set; }
 
 
-        protected PipelineMessage(Pipeline<TScope> pipeline, IPipelineComponent<TScope> sender, TScope scope, IPipelineMessage<TScope> previous = null)
+        protected PipelineMessage(Pipeline<TScope> pipeline, IPipelineComponent<TScope> sender, TScope context, IPipelineMessage<TScope> previous = null)
         {
             _pipeline = pipeline;
             Sender = sender;
-            Scope = scope;
+            Context = context;
             if (previous != null)
             {
                 // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
@@ -56,7 +56,7 @@ namespace Pipes.Types
         {
             if (scope == null || scope.Equals(default(TScope)))
             {
-                scope = Scope;
+                scope = Context;
             }
             _pipeline.EmitMessage(new PipelineMessage<TData, TScope>(_pipeline, Sender, data, scope, this));
         }
@@ -66,7 +66,7 @@ namespace Pipes.Types
         {
             if (scope == null || scope.Equals(default(TScope)))
             {
-                scope = Scope;
+                scope = Context;
             }
             await _pipeline.EmitMessageAsync(new PipelineMessage<TData, TScope>(_pipeline, Sender, data, scope, this));
         }
@@ -76,7 +76,7 @@ namespace Pipes.Types
         {
             if (scope == null || scope.Equals(default(TScope)))
             {
-                scope = Scope;
+                scope = Context;
             }
             _pipeline.EmitMessage(new PipelineMessage<TData, TScope>(_pipeline, origin, data, scope, this));
         }
@@ -86,7 +86,7 @@ namespace Pipes.Types
         {
             if (scope == null || scope.Equals(default(TScope)))
             {
-                scope = Scope;
+                scope = Context;
             }
             await _pipeline.EmitMessageAsync(new PipelineMessage<TData, TScope>(_pipeline, origin, data, scope, this));
         }
@@ -107,7 +107,7 @@ namespace Pipes.Types
 
     public class PipelineMessage<TData, TScope> : PipelineMessage<TScope>, IPipelineMessage<TData, TScope> where TData : class
     {
-        internal PipelineMessage(Pipeline<TScope> pipeline, IPipelineComponent<TScope> sender, TData data, TScope scope, IPipelineMessage<TScope> previous = null) : base( pipeline, sender, scope, previous )
+        internal PipelineMessage(Pipeline<TScope> pipeline, IPipelineComponent<TScope> sender, TData data, TScope context, IPipelineMessage<TScope> previous = null) : base( pipeline, sender, context, previous )
         {
             Data = data;
         }
