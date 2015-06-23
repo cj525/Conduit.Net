@@ -108,7 +108,8 @@ namespace Pipes.Implementation
                     if (_queueThread == null)
                         _queueThread = new MessageQueueThread(Target.ContainedType.Name);
 
-                    _queueThread.Enqueue(WithWait ? () => Receiver.Receive(message).Wait() : (Action) (() => Receiver.Receive(message)));
+                    // == true for mono bug
+                    _queueThread.Enqueue(WithWait == true? () => Receiver.Receive(message).Wait() : (Action) (() => Receiver.Receive(message)));
 
                     if (!_queueThread.IsStarted)
                     {
