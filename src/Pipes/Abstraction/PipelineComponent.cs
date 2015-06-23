@@ -86,9 +86,10 @@ namespace Pipes.Abstraction
                 _builder = builder;
             }
 
-            public void Emits<T>() where T : class
+            public EmissionRegistrar Emits<T>() where T : class
             {
                 _builder.Emits<T>();
+                return this;
             }
         }
 
