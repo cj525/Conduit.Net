@@ -23,10 +23,10 @@ namespace Pipes.Stubs
         {
         }
 
-        private Task Trigger(T data, TScope scope) 
+        private async Task Trigger(T data, TScope scope) 
         {
             var message = new PipelineMessage<T,TScope>(Pipeline, Component, data, scope);
-            return Pipeline.RouteMessage(message);
+            await Pipeline.RouteMessage(message);
         }
 
         // ReSharper disable once RedundantAssignment

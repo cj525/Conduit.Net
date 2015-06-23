@@ -46,26 +46,28 @@ namespace Pipes.Stubs
         }
 
         [DebuggerHidden]
-        internal override Task Receive(IPipelineMessage<TScope> message)
+        internal override async Task Receive(IPipelineMessage<TScope> message)
         {
             //Console.WriteLine("- Receiving {0} on Thread {1}", ((IPipelineMessage<object>)message).Data.GetType().Name, Thread.CurrentThread.ManagedThreadId);
-
+            var handledAwait = default(Task);
             // async keyword not needed, chain maintained on Task
             try
             {
                 var pipelineMessage = message as IPipelineMessage<TData, TScope>;
                 if (pipelineMessage == null)
                     throw new Exception("Cast failure in bridge");
-                return _bridge(pipelineMessage);
+                await _bridge(pipelineMessage);
             }
             catch (Exception exception)
             {
                 var handled = message.RaiseException(exception);
                 if( handled )
-                    return Task.FromResult(exception);
-
-                throw;
+                    handledAwait = Task.FromResult(exception);
+                else
+                    throw;
             }
+            if (handledAwait != null)
+                await handledAwait;
         }
 
         internal void Calls(Func<IPipelineMessage<TData, TScope>, Task> bridge)

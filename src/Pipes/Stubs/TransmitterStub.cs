@@ -19,9 +19,9 @@ namespace Pipes.Stubs
         }
 
 
-        public Task Emit(T data, TScope scope)
+        public async Task Emit(T data, TScope scope)
         {
-            return Pipeline.EmitAsync(Component, data, scope);
+            await Pipeline.EmitAsync(Component, data, scope);
         }
 
 

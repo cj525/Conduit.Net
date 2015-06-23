@@ -86,7 +86,7 @@ namespace Pipes.Implementation
         }
 
         [DebuggerHidden]
-        internal Task Invoke(IPipelineMessage<TScope> message)
+        internal async Task Invoke(IPipelineMessage<TScope> message)
         {
             if (Receiver == null && !_isManifold)
                 throw new NotAttachedException("Conduit is not attached.");
@@ -95,11 +95,13 @@ namespace Pipes.Implementation
             {
                 if (Receiver != null)
                 {
-                    return Receiver.Receive(message);
+                    await Receiver.Receive(message);
                 }
-
-                var target = _manifold[NextPtr()];
-                return target.Invoke(message);
+                else
+                {
+                    var target = _manifold[NextPtr()];
+                    await target.Invoke(message);
+                }
             }
             else
             {
@@ -147,7 +149,7 @@ namespace Pipes.Implementation
                     }
                 }
             }
-            return Abstraction.Target.EmptyTask;
+            await Abstraction.Target.EmptyTask;
         }
 
         private void EnqueueOnManifold(IPipelineMessage<TScope> message)

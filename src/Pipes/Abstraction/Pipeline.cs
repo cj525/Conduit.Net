@@ -48,9 +48,10 @@ namespace Pipes.Abstraction
         /// <param name="thisPipeline"></param>
         protected abstract void Describe(IPipelineBuilder<TScope> thisPipeline);
 
-        protected virtual void HandleUnknownMessage<T>(IPipelineMessage<T, TScope> message) where T : class
+        protected virtual async Task HandleUnknownMessage<T>(IPipelineMessage<T, TScope> message) where T : class
         {
             Console.WriteLine("** Unknown message in pipeline of type: " + typeof(T));
+            await Target.EmptyTask;
         }
 
         /// <summary>
@@ -257,7 +258,7 @@ namespace Pipes.Abstraction
         }
 
         //[DebuggerHidden]
-        internal Task RouteMessage<T>(IPipelineMessage<T,TScope> message) where T : class
+        internal async Task RouteMessage<T>(IPipelineMessage<T,TScope> message) where T : class
         {
             //Console.WriteLine(" -Sending {0} on Thread {1}", ((IPipelineMessage<object>)message).Data.GetType().Name, Thread.CurrentThread.ManagedThreadId);
             // First search taps
@@ -284,9 +285,8 @@ namespace Pipes.Abstraction
                     }
                     else
                     {
-                        HandleUnknownMessage(message);
+                        await HandleUnknownMessage(message);
                     }
-                    return Target.EmptyTask;
                 }
             }
             else
@@ -300,15 +300,15 @@ namespace Pipes.Abstraction
             try
             {
                 if (targets.Length == 0)
-                    return Target.EmptyTask;
+                    await Target.EmptyTask;
 
                 if (targets.Length > 1)
                 {
-                    return Task.WhenAll(targets.Select(each => each.Invoke(message)));
+                    await Task.WhenAll(targets.Select(each => each.Invoke(message)));
+                    return;
                 }
-
-                (targets[0].Invoke(message)).Wait();
-                return Target.EmptyTask;
+                    
+                await targets[0].Invoke(message);
             }
             // ReSharper disable once UnusedVariable
             catch (PipelineException<TScope> exception)
@@ -361,9 +361,9 @@ namespace Pipes.Abstraction
         }
 
         [DebuggerHidden]
-        public Task EmitAsync<T>(T data, TScope scope) where T : class
+        public async Task EmitAsync<T>(T data, TScope scope) where T : class
         {
-            return EmitAsync(null, data, scope);
+            await EmitAsync(null, data, scope);
         }
 
         [DebuggerHidden]
@@ -373,9 +373,9 @@ namespace Pipes.Abstraction
         }
 
         [DebuggerHidden]
-        public Task EmitMessageAsync<T>(IPipelineMessage<T,TScope> message) where T : class
+        public async Task EmitMessageAsync<T>(IPipelineMessage<T, TScope> message) where T : class
         {
-            return RouteMessage(message);
+            await RouteMessage(message);
         }
 
         public virtual void Dispose()
@@ -447,10 +447,10 @@ namespace Pipes.Abstraction
         }
 
         // ReSharper disable once MemberCanBePrivate.Global
-        internal Task EmitAsync<T>(IPipelineComponent<TScope> sender, T data, TScope scope) where T : class
+        internal async Task EmitAsync<T>(IPipelineComponent<TScope> sender, T data, TScope scope) where T : class
         {
             var message = new PipelineMessage<T, TScope>(this, sender, data, scope);
-            return EmitMessageAsync(message);
+            await EmitMessageAsync(message);
         }
 
 

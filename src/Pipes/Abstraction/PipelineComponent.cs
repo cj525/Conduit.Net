@@ -50,25 +50,24 @@ namespace Pipes.Abstraction
         }
 
         [DebuggerHidden]
-        protected Task EmitAsync<TData>(TData data, TScope scope = default(TScope)) where TData : class
+        protected async Task EmitAsync<TData>(TData data, TScope scope = default(TScope)) where TData : class
         {
             if (_pipeline == null)
                 throw new NotAttachedException("Unattached Component cannot transmit.");
 
-            return _pipeline.EmitMessageAsync(new PipelineMessage<TData,TScope>(_pipeline, this, data, scope));
+            await _pipeline.EmitMessageAsync(new PipelineMessage<TData,TScope>(_pipeline, this, data, scope));
         }
 
         [DebuggerHidden]
         protected void EmitChain<T>(IPipelineMessage<TScope> message, T data, TScope scope = default(TScope)) where T : class
-        
         {
             message.EmitChain(this, data, scope);
         }
 
         [DebuggerHidden]
-        protected Task EmitChainAsync<T>(IPipelineMessage<TScope> message, T data, TScope scope = default(TScope)) where T : class
+        protected async Task EmitChainAsync<T>(IPipelineMessage<TScope> message, T data, TScope scope = default(TScope)) where T : class
         {
-            return message.EmitChainAsync(this, data, scope);
+            await message.EmitChainAsync(this, data, scope);
         }
 
         protected void Terminate()

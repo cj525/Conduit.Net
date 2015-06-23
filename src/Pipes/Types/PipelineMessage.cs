@@ -62,13 +62,13 @@ namespace Pipes.Types
         }
 
         [DebuggerHidden]
-        public Task EmitAsync<TData>(TData data, TScope scope = default(TScope)) where TData : class
+        public async Task EmitAsync<TData>(TData data, TScope scope = default(TScope)) where TData : class
         {
             if (scope == null || scope.Equals(default(TScope)))
             {
                 scope = Scope;
             }
-            return _pipeline.EmitMessageAsync(new PipelineMessage<TData, TScope>(_pipeline, Sender, data, scope, this));
+            await _pipeline.EmitMessageAsync(new PipelineMessage<TData, TScope>(_pipeline, Sender, data, scope, this));
         }
 
         [DebuggerHidden]
@@ -82,13 +82,13 @@ namespace Pipes.Types
         }
 
         [DebuggerHidden]
-        public Task EmitChainAsync<TData>(IPipelineComponent<TScope> origin, TData data, TScope scope = default(TScope)) where TData : class
+        public async Task EmitChainAsync<TData>(IPipelineComponent<TScope> origin, TData data, TScope scope = default(TScope)) where TData : class
         {
             if (scope == null || scope.Equals(default(TScope)))
             {
                 scope = Scope;
             }
-            return _pipeline.EmitMessageAsync(new PipelineMessage<TData, TScope>(_pipeline, origin, data, scope, this));
+            await _pipeline.EmitMessageAsync(new PipelineMessage<TData, TScope>(_pipeline, origin, data, scope, this));
         }
 
         public bool RaiseException(Exception exception, TScope scope = default(TScope))
