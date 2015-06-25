@@ -92,22 +92,22 @@ namespace Pipes.Abstraction
             }
         }
 
-        protected IObserver<TData> ObserveFor<TData>() where TData : class
+        protected Observer<TData> ObserveFor<TData>() where TData : class
         {
             return new Observer<TData>(this, null, null);
         }
 
-        protected IObserver<TData> ObserveFor<TData>(object aux) where TData : class
+        protected Observer<TData> ObserveFor<TData>(object aux) where TData : class
         {
             return new Observer<TData>(this, null, aux);
         }
 
-        protected IObserver<TData> ObserveFor<TData>(IPipelineMessage<TScope> message) where TData : class
+        protected Observer<TData> ObserveFor<TData>(IPipelineMessage<TScope> message) where TData : class
         {
             return new Observer<TData>(this, message, null);
         }
 
-        protected IObserver<TData> ObserveFor<TData>(IPipelineMessage<TScope> message, object aux) where TData : class
+        protected Observer<TData> ObserveFor<TData>(IPipelineMessage<TScope> message, object aux) where TData : class
         {
             return new Observer<TData>(this, message, aux);
         }
@@ -124,11 +124,12 @@ namespace Pipes.Abstraction
                 Aux = aux;
             }
         }
-        private class Observer<TData> : IObserver<TData> where TData : class
+        public class Observer<TData> : IObserver<TData> where TData : class
         {
             private readonly PipelineComponent<TScope> _component;
             private readonly IPipelineMessage<TScope> _message;
             private readonly object _aux;
+            private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
             public Observer(PipelineComponent<TScope> component, IPipelineMessage<TScope> message, object aux)
             {
@@ -145,6 +146,8 @@ namespace Pipes.Abstraction
                     _component.EmitChain(_message, complete);
                 else
                     _component.Emit(complete);
+
+                _disposables.Apply(item => item.Dispose());
             }
 
             public void OnError(Exception error)
@@ -156,6 +159,8 @@ namespace Pipes.Abstraction
                 }
                 else
                     _component.Emit(error);
+
+                _disposables.Apply(item => item.Dispose());
             }
 
             public void OnNext(TData value)
@@ -164,6 +169,12 @@ namespace Pipes.Abstraction
                     _component.EmitChain( _message, value );
                 else
                     _component.Emit(value);
+            }
+
+            public Observer<TData> WithDisposal(IDisposable disposable)
+            {
+                _disposables.Add(disposable);
+                return this;
             }
         }
     }

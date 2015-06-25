@@ -144,7 +144,7 @@ namespace Pipes.Implementation
                             var thread = _queueThreads[ptr];
                             var target = _manifold[ptr];
                             
-                            thread.Enqueue(() => target.Invoke(message));
+                            thread.Enqueue(() => target.Invoke(message).Wait());
                         }
                     }
                 }

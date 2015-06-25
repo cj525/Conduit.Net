@@ -32,7 +32,7 @@ namespace Pipes.Stubs
         // ReSharper disable once RedundantAssignment
         internal void GetTrigger(ref Action<T,TScope> trigger)
         {
-            trigger = (data, token) => Trigger(data,token);
+            trigger = (data, token) => Trigger(data,token).Wait();
         }
 
         // ReSharper disable once RedundantAssignment
