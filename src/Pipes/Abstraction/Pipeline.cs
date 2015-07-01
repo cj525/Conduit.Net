@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Pipes.Exceptions;
 using Pipes.Extensions;
@@ -34,7 +35,11 @@ namespace Pipes.Abstraction
 
         private Action<PipelineException<TScope>> _exceptionHandler;
 
+        private int _messagesInFlight;
+
         public PipelineException<TScope> FatalException { get; private set; }
+
+        public int MessagesInFlight { get { return _messagesInFlight; } }
 
         protected Pipeline()
         {
@@ -87,9 +92,14 @@ namespace Pipes.Abstraction
             _exceptionHandler = null;
         }
 
-        public void Shutdown()
+        public async Task Shutdown()
         {
-            _conduits.SelectMany(kv => kv.Value).SelectMany(kv => kv.Value).Where(conduit => conduit.OffThread).Apply(conduit => conduit.Shutdown());
+            //_conduits.SelectMany(kv => kv.Value).SelectMany(kv => kv.Value).Where(conduit => conduit.OffThread).Apply(conduit => conduit.Shutdown());
+            while (_messagesInFlight > 0)
+            {
+                // Continually yield this thread until messages have stopped
+                await Task.Delay(15);
+            }
         }
 
 
@@ -260,71 +270,74 @@ namespace Pipes.Abstraction
         //[DebuggerHidden]
         internal async Task RouteMessage<T>(IPipelineMessage<T,TScope> message) where T : class
         {
-            //Console.WriteLine(" -Sending {0} on Thread {1}", ((IPipelineMessage<object>)message).Data.GetType().Name, Thread.CurrentThread.ManagedThreadId);
-            // First search taps
-            //var taps = 
-            var senderType = message.Sender == null ? _thisType : message.Sender.GetType();
-            if (!_conduits.ContainsKey(senderType))
-                throw new NotAttachedException("No handler for sender: " + senderType.Name);
-
-            Conduit<TScope>[] targets = null;
-            var sender = _conduits[senderType];
-            var dataType = typeof(T);
-
-            if (!sender.ContainsKey(dataType))
-            {
-                sender = _conduits[_thisType];
-
-                targets = sender.Values.SelectMany(knownType => knownType.Where(container => container.MessageType.IsAssignableFrom(dataType))).ToArray();
-
-                if (!targets.Any())
-                {
-                    if (dataType.IsAssignableFrom(typeof (Exception)))
-                    {
-                        message.RaiseException(message.Data as Exception);
-                    }
-                    else
-                    {
-                        await HandleUnknownMessage(message);
-                    }
-                }
-            }
-            else
-            {
-                targets = _conduits[senderType][dataType].ToArray();
-            }
-
-
-
-            //var targets = lookup.Where( item => item.).SelectMany( list => list.Value ).SelectMany( list => list.Value ).ToArray();
             try
             {
-                if (targets.Length == 0)
+                Interlocked.Increment(ref _messagesInFlight);
+
+                var senderType = message.Sender == null ? _thisType : message.Sender.GetType();
+                if (!_conduits.ContainsKey(senderType))
+                    throw new NotAttachedException("No handler for sender: " + senderType.Name);
+
+                Conduit<TScope>[] targets = null;
+                var sender = _conduits[senderType];
+                var dataType = typeof(T);
+
+                if (!sender.ContainsKey(dataType))
                 {
-                    await Target.EmptyTask;
-                    return;
+                    sender = _conduits[_thisType];
+
+                    targets = sender.Values.SelectMany(knownType => knownType.Where(container => container.MessageType.IsAssignableFrom(dataType))).ToArray();
+
+                    if (!targets.Any())
+                    {
+                        if (dataType.IsAssignableFrom(typeof(Exception)))
+                        {
+                            message.RaiseException(message.Data as Exception);
+                        }
+                        else
+                        {
+                            await HandleUnknownMessage(message);
+                        }
+                    }
+                }
+                else
+                {
+                    targets = _conduits[senderType][dataType].ToArray();
                 }
 
-                if (targets.Length > 1)
+                try
                 {
-                    await Task.WhenAll(targets.Select(each => each.Invoke(message)));
-                    return;
+                    if (targets.Length == 0)
+                    {
+                        await Target.EmptyTask;
+                        return;
+                    }
+
+                    if (targets.Length > 1)
+                    {
+                        await Task.WhenAll(targets.Select(each => each.Invoke(message)));
+                        return;
+                    }
+
+                    await targets[0].Invoke(message);
                 }
-                    
-                await targets[0].Invoke(message);
+                catch (PipelineException<TScope> exception)
+                {
+                    // Maybe someone will inspect this outside of the upcoming explosion's catcher
+                    FatalException = exception;
+
+                    // There was no handler so shutdown the pipe and explode!
+                    Dispose();
+
+                    // And boom goes the dynamite
+                    throw;
+                }
             }
-            // ReSharper disable once UnusedVariable
-            catch (PipelineException<TScope> exception)
+            finally
             {
-                // Maybe someone will inspect this outside of the upcoming explosion's catcher
-                FatalException = exception;
-
-                // There was no handler so shutdown the pipe and explode!
-                Dispose();
-
-                // And boom goes the dynamite
-                throw;
+                Interlocked.Decrement(ref _messagesInFlight);
             }
+
         }
 
         internal bool HandleException(PipelineException<TScope> pipelineException)

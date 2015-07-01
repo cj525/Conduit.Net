@@ -183,11 +183,11 @@ namespace Pipes.Implementation
             };
         }
 
-        internal void Shutdown()
-        {
-            if( _queueThread != null )
-                _queueThread.Shutdown();
-        }
+        //internal void Shutdown()
+        //{
+        //    if( _queueThread != null )
+        //        _queueThread.Shutdown();
+        //}
 
         public void Dispose()
         {
