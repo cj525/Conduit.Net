@@ -66,6 +66,7 @@ namespace Pipes.Abstraction
         /// </summary>
         protected void Build()
         {
+            // Build the pipeline
             ConstructWith(new Builder<TContext>(this));
 
             // Attach components 
@@ -74,40 +75,6 @@ namespace Pipes.Abstraction
             // Connect messaging system
             GenerateAndConnectConduits();
         }
-
-        public void ConstructWith(IPipelineBuilder<TContext> builder)
-        {
-            // Figure out what I need and what I do (get my building blocks)
-            Describe(builder);
-
-            // Apply building block actions for pipeline
-            this.ApplyOver(_attachActions);
-        }
-
-
-        public void Reset()
-        {
-            _attachActions.Clear();
-            _ctors.Clear();
-            _invocations.Clear();
-            _receivers.Clear();
-            _transmitters.Clear();
-            _components.Clear();
-            _taps.Clear();
-            _tubes.Clear();
-            _exceptionHandler = null;
-        }
-
-        public async Task Shutdown()
-        {
-            //_conduits.SelectMany(kv => kv.Value).SelectMany(kv => kv.Value).Where(conduit => conduit.OffThread).Apply(conduit => conduit.Shutdown());
-            while (_messagesInFlight > 0)
-            {
-                // Continually yield this thread until messages have stopped
-                await Task.Delay(15);
-            }
-        }
-
 
         private void AttachAll()
         {
@@ -363,6 +330,39 @@ namespace Pipes.Abstraction
         //    Describe(new Analyzer(this));
         //}
 
+
+        public void ConstructWith(IPipelineBuilder<TContext> builder)
+        {
+            // Figure out what I need and what I do (get my building blocks)
+            Describe(builder);
+
+            // Apply building block actions for pipeline
+            this.ApplyOver(_attachActions);
+        }
+
+
+        public void Reset()
+        {
+            _attachActions.Clear();
+            _ctors.Clear();
+            _invocations.Clear();
+            _receivers.Clear();
+            _transmitters.Clear();
+            _components.Clear();
+            _taps.Clear();
+            _tubes.Clear();
+            _exceptionHandler = null;
+        }
+
+        public async Task Shutdown()
+        {
+            //_conduits.SelectMany(kv => kv.Value).SelectMany(kv => kv.Value).Where(conduit => conduit.OffThread).Apply(conduit => conduit.Shutdown());
+            while (_messagesInFlight > 0)
+            {
+                // Continually yield this thread until messages have stopped
+                await Task.Delay(15);
+            }
+        }
 
         public IPipelineMessageTap<T,TContext> CreateMessageTap<T>() where T : class
         {
