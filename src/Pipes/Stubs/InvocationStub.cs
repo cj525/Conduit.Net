@@ -5,9 +5,9 @@ using Pipes.Types;
 
 namespace Pipes.Stubs
 {
-    public abstract class InvocationStub<TScope> : Stub<TScope>
+    public abstract class InvocationStub<TContext> : Stub<TContext>
     {
-        internal Stub<TScope> Target;
+        internal Stub<TContext> Target;
 
         protected InvocationStub(Type containedType)
             : base(null, containedType)
@@ -16,32 +16,32 @@ namespace Pipes.Stubs
         }
     }
 
-    public class InvocationStub<T, TScope> : InvocationStub<TScope> where T : class
+    public class InvocationStub<T, TContext> : InvocationStub<TContext> where T : class
     {
 
         public InvocationStub() : base(typeof(T))
         {
         }
 
-        private async Task Trigger(T data, TScope scope) 
+        private async Task Trigger(T data, TContext context) 
         {
-            var message = new PipelineMessage<T,TScope>(Pipeline, Component, data, scope);
+            var message = new PipelineMessage<T,TContext>(Pipeline, Component, data, context);
             await Pipeline.RouteMessage(message);
         }
 
         // ReSharper disable once RedundantAssignment
-        internal void GetTrigger(ref Action<T,TScope> trigger)
+        internal void GetTrigger(ref Action<T,TContext> trigger)
         {
             trigger = (data, token) => Trigger(data,token).Wait();
         }
 
         // ReSharper disable once RedundantAssignment
-        internal void GetAsyncTrigger(ref Func<T, TScope, Task> trigger)
+        internal void GetAsyncTrigger(ref Func<T, TContext, Task> trigger)
         {
             trigger = Trigger;
         }
 
-        internal void SetTarget(Stub<TScope> target)
+        internal void SetTarget(Stub<TContext> target)
         {
             // IsConstructed = false
             Target = target;

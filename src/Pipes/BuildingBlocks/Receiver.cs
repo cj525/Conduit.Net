@@ -8,20 +8,20 @@ using Pipes.Stubs;
 
 namespace Pipes.BuildingBlocks
 {
-    internal class Receiver<TData,TScope> : BuildingBlock<TScope>, IPipelineMessageReceiver<TData,TScope> where TData : class
+    internal class Receiver<TData,TContext> : BuildingBlock<TContext>, IPipelineMessageReceiver<TData,TContext> where TData : class
     {
-        private readonly ReceiverStub<TData,TScope> _receiver;
-        private readonly MessageTarget<TData,TScope> _messageTarget;
+        private readonly ReceiverStub<TData,TContext> _receiver;
+        private readonly MessageTarget<TData,TContext> _messageTarget;
 
         private bool _blackhole = true;
 
-        public Receiver(IPipelineComponent<TScope> component) : base(component)
+        public Receiver(IPipelineComponent<TContext> component) : base(component)
         {
-            _receiver = new ReceiverStub<TData,TScope>(component);
-            _messageTarget = new MessageTarget<TData,TScope>();
+            _receiver = new ReceiverStub<TData,TContext>(component);
+            _messageTarget = new MessageTarget<TData,TContext>();
         }
 
-        protected override void AttachPipeline(Pipeline<TScope> pipeline)
+        protected override void AttachPipeline(Pipeline<TContext> pipeline)
         {
             if (_blackhole)
                 throw new NotAttachedException("Receiver is black-hole. (rx without delegate)");
@@ -46,7 +46,7 @@ namespace Pipes.BuildingBlocks
             _messageTarget.Set(action);
         }
 
-        public void WhichCalls(Action<IPipelineMessage<TData,TScope>> action)
+        public void WhichCalls(Action<IPipelineMessage<TData,TContext>> action)
         {
             _blackhole = false;
             _messageTarget.Set(action);
@@ -64,7 +64,7 @@ namespace Pipes.BuildingBlocks
             _messageTarget.Set(asyncAction);
         }
 
-        public void WhichCallsAsync(Func<IPipelineMessage<TData,TScope>, Task> asyncAction)
+        public void WhichCallsAsync(Func<IPipelineMessage<TData,TContext>, Task> asyncAction)
         {
             _blackhole = false;
             _messageTarget.Set(asyncAction);

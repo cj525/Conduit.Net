@@ -5,50 +5,50 @@ using Pipes.Abstraction;
 namespace Pipes.Interfaces
 {
 
-    public interface IPipelineBuilder<TScope> : IPipelineConstruction<TScope>
+    public interface IPipelineBuilder<TContext> : IPipelineConstruction<TContext>
     {
-        IPipelineInvocation<TScope> IsInvokedBy<TData>(ref Action<TData, TScope> trigger) where TData : class;
-        IPipelineInvocation<TScope> IsInvokedAsyncBy<TData>(ref Func<TData, TScope, Task> trigger) where TData : class;
+        IPipelineInvocation<TContext> IsInvokedBy<TData>(ref Action<TData, TContext> trigger) where TData : class;
+        IPipelineInvocation<TContext> IsInvokedAsyncBy<TData>(ref Func<TData, TContext, Task> trigger) where TData : class;
     }
 
-    public interface IPipelineConstruction<TScope>
+    public interface IPipelineConstruction<TContext>
     {
-        IPipelineConstructor<TScope> Constructs<T>(Func<T> ctor) where T : IPipelineComponent<TScope>;
+        IPipelineConstructor<TContext> Constructs<TComponent>(Func<TComponent> ctor) where TComponent : IPipelineComponent<TContext>;
 
-        IPipelineConstructorMany<TScope> ConstructsMany(int count);
+        IPipelineConstructorMany<TContext> ConstructsMany(int count);
     }
 
-    public interface IPipelineConstructor<TScope>
+    public interface IPipelineConstructor<TContext>
     {
-        void Into(ref Stub<TScope> proxy);
+        void Into(ref Stub<TContext> proxy);
     }
 
 
     // TODO: We still supporting Many?
-    public interface IPipelineConstructorManyTarget<out TData, TScope> where TData : IPipelineComponent<TScope>
+    public interface IPipelineConstructorManyTarget<TContext>
     {
-        void Into(ref Stub<TScope> proxy);
+        void Into(ref Stub<TContext> proxy);
     }
 
-    public interface IPipelineConstructorMany<TScope>
+    public interface IPipelineConstructorMany<TContext>
     {
-        IPipelineConstructorManyTarget<TComponent,TScope> Using<TComponent>(Func<TComponent> ctor) where TComponent : IPipelineComponent<TScope>;
+        IPipelineConstructorManyTarget<TContext> Using<TComponent>(Func<TComponent> ctor) where TComponent : IPipelineComponent<TContext>;
     }
 
-    public interface IPipelineInvocation<TScope>
+    public interface IPipelineInvocation<TContext>
     {
-        void WhichTransmitsTo(Stub<TScope> target);
+        void WhichTransmitsTo(Stub<TContext> target);
     }
 
-    public interface IPipelineComponentBuilder<TScope> : IPipelineComponentEmissionBuilder<TScope>
+    public interface IPipelineComponentBuilder<TContext> : IPipelineComponentEmissionBuilder<TContext>
     {
-        IPipelineMessageReceiver<TData,TScope> Receives<TData>() where TData : class;
+        IPipelineMessageReceiver<TData,TContext> Receives<TData>() where TData : class;
 
     }
 
-    public interface IPipelineComponentEmissionBuilder<TScope>
+    public interface IPipelineComponentEmissionBuilder<TContext>
     {
-        IPipelineComponentEmissionBuilder<TScope> Emits<T>() where T : class;
+        IPipelineComponentEmissionBuilder<TContext> Emits<T>() where T : class;
     }
 
 

@@ -6,22 +6,22 @@ using Pipes.Interfaces;
 
 namespace Pipes.Implementation
 {
-    internal class Builder<TScope> : IPipelineBuilder<TScope>, IPipelineComponentBuilder<TScope>
+    internal class Builder<TContext> : IPipelineBuilder<TContext>, IPipelineComponentBuilder<TContext>
     {
-        private readonly IPipelineComponent<TScope> _component;
-        private readonly Pipeline<TScope> _pipeline;
+        private readonly IPipelineComponent<TContext> _component;
+        private readonly Pipeline<TContext> _pipeline;
 
-        internal Builder(IPipelineComponent<TScope> component)
+        internal Builder(IPipelineComponent<TContext> component)
         {
             _component = component;
         }
 
-        internal Builder(Pipeline<TScope> pipeline)
+        internal Builder(Pipeline<TContext> pipeline)
         {
             _pipeline = pipeline;
         }
 
-        public IPipelineInvocation<TScope> IsInvokedBy<TData>(ref Action<TData, TScope> trigger) where TData : class
+        public IPipelineInvocation<TContext> IsInvokedBy<TData>(ref Action<TData, TContext> trigger) where TData : class
         {
             if (_component != null)
             {
@@ -29,10 +29,10 @@ namespace Pipes.Implementation
                 //return new Invocation<T>(_component, ref trigger);
             }
             
-            return new Invocation<TData,TScope>(_pipeline, ref trigger);
+            return new Invocation<TData,TContext>(_pipeline, ref trigger);
         }
 
-        public IPipelineInvocation<TScope> IsInvokedAsyncBy<TData>(ref Func<TData, TScope, Task> trigger) where TData : class
+        public IPipelineInvocation<TContext> IsInvokedAsyncBy<TData>(ref Func<TData, TContext, Task> trigger) where TData : class
         {
             if (_component != null)
             {
@@ -40,46 +40,46 @@ namespace Pipes.Implementation
                 //return new Invocation<T>(_component, ref trigger);
             }
 
-            return new Invocation<TData,TScope>(_pipeline, ref trigger);
+            return new Invocation<TData,TContext>(_pipeline, ref trigger);
         }
 
 
-        public IPipelineConstructor<TScope> Constructs<TComponent>(Func<TComponent> ctor) where TComponent : IPipelineComponent<TScope>
+        public IPipelineConstructor<TContext> Constructs<TComponent>(Func<TComponent> ctor) where TComponent : IPipelineComponent<TContext>
         {
             if (_component != null)
             {
                 throw new NotSupportedException("Only the pipeline may declare a constructor.");
             }
 
-            return new Constructor<TComponent,TScope>(_pipeline, ctor);
+            return new Constructor<TComponent,TContext>(_pipeline, ctor);
         }
 
-        public IPipelineConstructorMany<TScope> ConstructsMany(int count)
+        public IPipelineConstructorMany<TContext> ConstructsMany(int count)
         {
             if (_component != null)
             {
                 throw new NotSupportedException("Only the pipeline may declare a constructor manifold.");
             }
 
-            return new ConstructorManifold<TScope>(_pipeline,count);
+            return new ConstructorManifold<TContext>(_pipeline,count);
         }
 
-        public IPipelineComponentEmissionBuilder<TScope> Emits<T>() where T : class
+        public IPipelineComponentEmissionBuilder<TContext> Emits<T>() where T : class
         {
             if (_component == null)
                 throw new ApplicationException("Can't create emitter on pipeline.");
 
-            Transmitter<T,TScope>.AttachTo(_component);
+            Transmitter<T,TContext>.AttachTo(_component);
             
             return this;
         }
 
-        public IPipelineMessageReceiver<T,TScope> Receives<T>() where T : class
+        public IPipelineMessageReceiver<T,TContext> Receives<T>() where T : class
         {
             if (_component == null)
                 throw new ApplicationException("Can't create receiver on pipeline.");
             
-            return new Receiver<T,TScope>(_component);
+            return new Receiver<T,TContext>(_component);
         }
     }
 }

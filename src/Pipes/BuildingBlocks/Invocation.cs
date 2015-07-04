@@ -7,9 +7,9 @@ using Pipes.Stubs;
 
 namespace Pipes.BuildingBlocks
 {
-    internal class Invocation<TData, TScope> : BuildingBlock<TScope>, IPipelineInvocation<TScope> where TData : class
+    internal class Invocation<TData, TContext> : BuildingBlock<TContext>, IPipelineInvocation<TContext> where TData : class
     {
-        private readonly InvocationStub<TData,TScope> _proxy;
+        private readonly InvocationStub<TData,TContext> _proxy;
         private bool _blackhole = true;
 
         //public Invocation(PipelineComponent component, ref Action<T> trigger) : base(component)
@@ -24,19 +24,19 @@ namespace Pipes.BuildingBlocks
         //    _proxy.GetAsyncTrigger(ref trigger);
         //}
 
-        public Invocation(Pipeline<TScope> pipeline, ref Action<TData,TScope> trigger) : base(pipeline)
+        public Invocation(Pipeline<TContext> pipeline, ref Action<TData,TContext> trigger) : base(pipeline)
         {
-            _proxy = new InvocationStub<TData, TScope>();
+            _proxy = new InvocationStub<TData, TContext>();
             _proxy.GetTrigger(ref trigger);
         }
 
-        public Invocation(Pipeline<TScope> pipeline, ref Func<TData, TScope, Task> trigger) : base(pipeline)
+        public Invocation(Pipeline<TContext> pipeline, ref Func<TData, TContext, Task> trigger) : base(pipeline)
         {
-            _proxy = new InvocationStub<TData, TScope>();
+            _proxy = new InvocationStub<TData, TContext>();
             _proxy.GetAsyncTrigger(ref trigger);
         }
 
-        protected override void AttachPipeline(Pipeline<TScope> pipeline)
+        protected override void AttachPipeline(Pipeline<TContext> pipeline)
         {
             if (_blackhole)
                 throw new NotAttachedException("Invocation is black-hole. (no receiver)");
@@ -45,7 +45,7 @@ namespace Pipes.BuildingBlocks
             pipeline.AddInvocation(_proxy);
         }
 
-        public void WhichTransmitsTo(Stub<TScope> target)
+        public void WhichTransmitsTo(Stub<TContext> target)
         {
             _blackhole = false;
             _proxy.SetTarget(target);

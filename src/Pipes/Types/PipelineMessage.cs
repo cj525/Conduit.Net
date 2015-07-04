@@ -8,19 +8,19 @@ using Pipes.Interfaces;
 
 namespace Pipes.Types
 {
-    public abstract class PipelineMessage<TScope> : IPipelineMessage<TScope>
+    public abstract class PipelineMessage<TContext> : IPipelineMessage<TContext>
     {
         // ReSharper disable once MemberCanBeProtected.Global
-        private readonly Pipeline<TScope> _pipeline;
+        private readonly Pipeline<TContext> _pipeline;
 
-        public IPipelineComponent<TScope> Sender { get; private set; }
+        public IPipelineComponent<TContext> Sender { get; private set; }
 
-        public IEnumerable<IPipelineMessage<TScope>> Stack { get; private set; }
+        public IEnumerable<IPipelineMessage<TContext>> Stack { get; private set; }
 
-        public TScope Context { get; private set; }
+        public TContext Context { get; private set; }
 
 
-        protected PipelineMessage(Pipeline<TScope> pipeline, IPipelineComponent<TScope> sender, TScope context, IPipelineMessage<TScope> previous = null)
+        protected PipelineMessage(Pipeline<TContext> pipeline, IPipelineComponent<TContext> sender, TContext context, IPipelineMessage<TContext> previous = null)
         {
             _pipeline = pipeline;
             Sender = sender;
@@ -35,15 +35,15 @@ namespace Pipes.Types
                     Stack = new[] {previous};
             }
             else
-                Stack = Enumerable.Empty<IPipelineMessage<TScope>>();
+                Stack = Enumerable.Empty<IPipelineMessage<TContext>>();
         }
 
         public IEnumerable<object> DataStack
         {
-            get { return Stack.Concat(new[] {this}).Cast<IPipelineMessage<object,TScope>>().Select( message => message.Data ); }
+            get { return Stack.Concat(new[] {this}).Cast<IPipelineMessage<object,TContext>>().Select( message => message.Data ); }
         }
 
-        public IPipelineMessage<TScope> Top
+        public IPipelineMessage<TContext> Top
         {
             get
             {
@@ -52,48 +52,48 @@ namespace Pipes.Types
         }
 
         [DebuggerHidden]
-        public void Emit<TData>(TData data, TScope scope = default(TScope)) where TData : class
+        public void Emit<TData>(TData data, TContext context = default(TContext)) where TData : class
         {
-            if (scope == null || scope.Equals(default(TScope)))
+            if (context == null || context.Equals(default(TContext)))
             {
-                scope = Context;
+                context = Context;
             }
-            _pipeline.EmitMessage(new PipelineMessage<TData, TScope>(_pipeline, Sender, data, scope, this));
+            _pipeline.EmitMessage(new PipelineMessage<TData, TContext>(_pipeline, Sender, data, context, this));
         }
 
         [DebuggerHidden]
-        public async Task EmitAsync<TData>(TData data, TScope scope = default(TScope)) where TData : class
+        public async Task EmitAsync<TData>(TData data, TContext context = default(TContext)) where TData : class
         {
-            if (scope == null || scope.Equals(default(TScope)))
+            if (context == null || context.Equals(default(TContext)))
             {
-                scope = Context;
+                context = Context;
             }
-            await _pipeline.EmitMessageAsync(new PipelineMessage<TData, TScope>(_pipeline, Sender, data, scope, this));
+            await _pipeline.EmitMessageAsync(new PipelineMessage<TData, TContext>(_pipeline, Sender, data, context, this));
         }
 
         [DebuggerHidden]
-        public void EmitChain<TData>(IPipelineComponent<TScope> origin, TData data, TScope scope = default(TScope)) where TData : class
+        public void EmitChain<TData>(IPipelineComponent<TContext> origin, TData data, TContext context = default(TContext)) where TData : class
         {
-            if (scope == null || scope.Equals(default(TScope)))
+            if (context == null || context.Equals(default(TContext)))
             {
-                scope = Context;
+                context = Context;
             }
-            _pipeline.EmitMessage(new PipelineMessage<TData, TScope>(_pipeline, origin, data, scope, this));
+            _pipeline.EmitMessage(new PipelineMessage<TData, TContext>(_pipeline, origin, data, context, this));
         }
 
         [DebuggerHidden]
-        public async Task EmitChainAsync<TData>(IPipelineComponent<TScope> origin, TData data, TScope scope = default(TScope)) where TData : class
+        public async Task EmitChainAsync<TData>(IPipelineComponent<TContext> origin, TData data, TContext context = default(TContext)) where TData : class
         {
-            if (scope == null || scope.Equals(default(TScope)))
+            if (context == null || context.Equals(default(TContext)))
             {
-                scope = Context;
+                context = Context;
             }
-            await _pipeline.EmitMessageAsync(new PipelineMessage<TData, TScope>(_pipeline, origin, data, scope, this));
+            await _pipeline.EmitMessageAsync(new PipelineMessage<TData, TContext>(_pipeline, origin, data, context, this));
         }
 
-        public bool RaiseException(Exception exception, TScope scope = default(TScope))
+        public bool RaiseException(Exception exception, TContext context = default(TContext))
         {
-            var pipelineException = new PipelineException<TScope>(_pipeline, exception, scope, this);
+            var pipelineException = new PipelineException<TContext>(_pipeline, exception, context, this);
 
             return _pipeline.HandleException(pipelineException); ;
         }
@@ -105,9 +105,9 @@ namespace Pipes.Types
     }
 
 
-    public class PipelineMessage<TData, TScope> : PipelineMessage<TScope>, IPipelineMessage<TData, TScope> where TData : class
+    public class PipelineMessage<TData, TContext> : PipelineMessage<TContext>, IPipelineMessage<TData, TContext> where TData : class
     {
-        internal PipelineMessage(Pipeline<TScope> pipeline, IPipelineComponent<TScope> sender, TData data, TScope context, IPipelineMessage<TScope> previous = null) : base( pipeline, sender, context, previous )
+        internal PipelineMessage(Pipeline<TContext> pipeline, IPipelineComponent<TContext> sender, TData data, TContext context, IPipelineMessage<TContext> previous = null) : base( pipeline, sender, context, previous )
         {
             Data = data;
         }

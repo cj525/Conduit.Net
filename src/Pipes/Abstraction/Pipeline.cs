@@ -15,29 +15,31 @@ namespace Pipes.Abstraction
 {
     public abstract class Pipeline : Pipeline<Object> { }
 
-    public abstract class Pipeline<TScope> : IDisposable  
+    public abstract class Pipeline<TContext> : IDisposable  
     {
         private readonly Type _thisType;
 
-        private readonly List<Action<Pipeline<TScope>>> _attachActions = new List<Action<Pipeline<TScope>>>();
+        private readonly List<Action<Pipeline<TContext>>> _attachActions = new List<Action<Pipeline<TContext>>>();
 
-        private readonly List<IPipelineComponent<TScope>> _components = new List<IPipelineComponent<TScope>>();
-        private readonly List<MessageTap<TScope>> _taps = new List<MessageTap<TScope>>();
+        private readonly List<IPipelineComponent<TContext>> _components = new List<IPipelineComponent<TContext>>();
+        private readonly List<MessageTap<TContext>> _taps = new List<MessageTap<TContext>>();
 
-        private readonly List<Stub<TScope>> _ctors = new List<Stub<TScope>>();
-        private readonly List<InvocationStub<TScope>> _invocations = new List<InvocationStub<TScope>>();
+        private readonly List<Stub<TContext>> _ctors = new List<Stub<TContext>>();
+        private readonly List<InvocationStub<TContext>> _invocations = new List<InvocationStub<TContext>>();
 
-        private readonly List<ReceiverStub<TScope>> _receivers = new List<ReceiverStub<TScope>>();
-        private readonly List<TransmitterStub<TScope>> _transmitters = new List<TransmitterStub<TScope>>();
+        private readonly List<ReceiverStub<TContext>> _receivers = new List<ReceiverStub<TContext>>();
+        private readonly List<TransmitterStub<TContext>> _transmitters = new List<TransmitterStub<TContext>>();
 
-        private readonly Dictionary<Type, Dictionary<Type, List<Conduit<TScope>>>> _conduits = new Dictionary<Type, Dictionary<Type, List<Conduit<TScope>>>>();
-        private readonly List<Conduit<TScope>> _tubes = new List<Conduit<TScope>>();
+        private readonly Dictionary<Type, Dictionary<Type, List<Conduit<TContext>>>> _conduits = new Dictionary<Type, Dictionary<Type, List<Conduit<TContext>>>>();
+        private readonly List<Conduit<TContext>> _tubes = new List<Conduit<TContext>>();
 
-        private Action<PipelineException<TScope>> _exceptionHandler;
+        private Action<PipelineException<TContext>> _exceptionHandler;
 
         private int _messagesInFlight;
 
-        public PipelineException<TScope> FatalException { get; private set; }
+        public PipelineException<TContext> FatalException { get; private set; }
+        
+        public IEnumerable<IPipelineComponent<TContext>> Components { get { return _components; } } 
 
         public int MessagesInFlight { get { return _messagesInFlight; } }
 
@@ -51,9 +53,9 @@ namespace Pipes.Abstraction
         /// the components and conduits which comprise this pipeline.
         /// </summary>
         /// <param name="thisPipeline"></param>
-        protected abstract void Describe(IPipelineBuilder<TScope> thisPipeline);
+        protected abstract void Describe(IPipelineBuilder<TContext> thisPipeline);
 
-        protected virtual async Task HandleUnknownMessage<T>(IPipelineMessage<T, TScope> message) where T : class
+        protected virtual async Task HandleUnknownMessage<T>(IPipelineMessage<T, TContext> message) where T : class
         {
             Console.WriteLine("** Unknown message in pipeline of type: " + typeof(T));
             await Target.EmptyTask;
@@ -64,11 +66,7 @@ namespace Pipes.Abstraction
         /// </summary>
         protected void Build()
         {
-            // Figure out what I need and what I do (get my building blocks)
-            Describe(new Builder<TScope>(this));
-
-            // Apply building block actions for pipeline
-            this.ApplyOver(_attachActions);
+            ConstructWith(new Builder<TContext>(this));
 
             // Attach components 
             AttachAll();
@@ -77,6 +75,14 @@ namespace Pipes.Abstraction
             GenerateAndConnectConduits();
         }
 
+        public void ConstructWith(IPipelineBuilder<TContext> builder)
+        {
+            // Figure out what I need and what I do (get my building blocks)
+            Describe(builder);
+
+            // Apply building block actions for pipeline
+            this.ApplyOver(_attachActions);
+        }
 
 
         public void Reset()
@@ -137,7 +143,7 @@ namespace Pipes.Abstraction
                 var sCtor = _ctors.FirstOrDefault(ctor => ctor.ContainedType == sType);
 
                 // Add conduit sender slot
-                var senderSlot = new Dictionary<Type, List<Conduit<TScope>>>();
+                var senderSlot = new Dictionary<Type, List<Conduit<TContext>>>();
                 _conduits.Add(senderType, senderSlot);
 
                 // Create tx/rx pairs
@@ -155,17 +161,17 @@ namespace Pipes.Abstraction
 
                         // Create message slot for this sender
                         if (!senderSlot.ContainsKey(messageType))
-                            senderSlot.Add(messageType, new List<Conduit<TScope>>());
+                            senderSlot.Add(messageType, new List<Conduit<TContext>>());
 
                         var messageSlot = senderSlot[messageType];
 
                         // If this is a manifold, create/use manifold entry
-                        if (tCtor is ConstructorManifoldStub<TScope>)
+                        if (tCtor is ConstructorManifoldStub<TContext>)
                         {
                             var manifolds = messageSlot.Where(slot => slot.Target == tCtor && slot.Source == sCtor).ToArray();
                             if (!manifolds.Any())
                             {
-                                var conduit = new Conduit<TScope>(sCtor, tCtor);
+                                var conduit = new Conduit<TContext>(sCtor, tCtor);
                                 messageSlot.Add(conduit);
                                 messageSlot = conduit.AsManifold();
                             }
@@ -199,7 +205,7 @@ namespace Pipes.Abstraction
                         else
                         {
                             // And add said conduit
-                            messageSlot.Add(new Conduit<TScope>(sCtor, tCtor, messageType) { Receiver = rx });
+                            messageSlot.Add(new Conduit<TContext>(sCtor, tCtor, messageType) { Receiver = rx });
                         }
                     }
                 }
@@ -207,7 +213,7 @@ namespace Pipes.Abstraction
 
 
             // Add taps sender slot
-            var tapSlot = new Dictionary<Type, List<Conduit<TScope>>>();
+            var tapSlot = new Dictionary<Type, List<Conduit<TContext>>>();
             _conduits.Add(_thisType, tapSlot);
 
             // Now add all the taps
@@ -226,7 +232,7 @@ namespace Pipes.Abstraction
                 {
                     var slot = _conduits[txType];
                     if (!slot.ContainsKey(messageType))
-                        slot.Add(messageType, new List<Conduit<TScope>>());
+                        slot.Add(messageType, new List<Conduit<TContext>>());
                     //slot[messageType].Add(tap);
                 }
                 foreach (var txType in txTypes)
@@ -241,7 +247,7 @@ namespace Pipes.Abstraction
 
                 // Create message slot for this sender
                 if (!tapSlot.ContainsKey(messageType))
-                    tapSlot.Add(messageType, new List<Conduit<TScope>>());
+                    tapSlot.Add(messageType, new List<Conduit<TContext>>());
                 var mSlot = tapSlot[messageType];
                 mSlot.Add(tap);
 
@@ -253,7 +259,7 @@ namespace Pipes.Abstraction
             {
                 var messageType = invocation.ContainedType;
                 if (!tapSlot.ContainsKey(messageType))
-                    tapSlot.Add(messageType, new List<Conduit<TScope>>());
+                    tapSlot.Add(messageType, new List<Conduit<TContext>>());
                 var mSlot = tapSlot[messageType];
                 var linv = invocation;
                 // ReSharper disable once LoopCanBeConvertedToQuery
@@ -261,14 +267,14 @@ namespace Pipes.Abstraction
                 {
                     var lrx = rx;
                     var tCtor = _ctors.FirstOrDefault(ctor => ctor.ContainedType == lrx.Component.GetType());
-                    mSlot.Add(new Conduit<TScope>(invocation, tCtor, messageType) { Receiver = rx });
+                    mSlot.Add(new Conduit<TContext>(invocation, tCtor, messageType) { Receiver = rx });
                 }
 
             }
         }
 
         //[DebuggerHidden]
-        internal async Task RouteMessage<T>(IPipelineMessage<T,TScope> message) where T : class
+        internal async Task RouteMessage<T>(IPipelineMessage<T,TContext> message) where T : class
         {
             try
             {
@@ -278,7 +284,7 @@ namespace Pipes.Abstraction
                 if (!_conduits.ContainsKey(senderType))
                     throw new NotAttachedException("No handler for sender: " + senderType.Name);
 
-                Conduit<TScope>[] targets = null;
+                Conduit<TContext>[] targets = null;
                 var sender = _conduits[senderType];
                 var dataType = typeof(T);
 
@@ -321,7 +327,7 @@ namespace Pipes.Abstraction
 
                     await targets[0].Invoke(message);
                 }
-                catch (PipelineException<TScope> exception)
+                catch (PipelineException<TContext> exception)
                 {
                     // Maybe someone will inspect this outside of the upcoming explosion's catcher
                     FatalException = exception;
@@ -340,7 +346,7 @@ namespace Pipes.Abstraction
 
         }
 
-        internal bool HandleException(PipelineException<TScope> pipelineException)
+        internal bool HandleException(PipelineException<TContext> pipelineException)
         {
             if (_exceptionHandler == null)
                 return false;
@@ -358,38 +364,38 @@ namespace Pipes.Abstraction
         //}
 
 
-        public IPipelineMessageTap<T,TScope> CreateMessageTap<T>() where T : class
+        public IPipelineMessageTap<T,TContext> CreateMessageTap<T>() where T : class
         {
-            var tap = new MessageTap<T,TScope>(this);
+            var tap = new MessageTap<T,TContext>(this);
             _taps.Add(tap);
             return tap;
         }
 
-        public void SuppressExceptions(Action<PipelineException<TScope>> exceptionHandler)
+        public void SuppressExceptions(Action<PipelineException<TContext>> exceptionHandler)
         {
             _exceptionHandler = exceptionHandler;
         }
 
         [DebuggerHidden]
-        public void Emit<T>(T data, TScope scope) where T : class
+        public void Emit<T>(T data, TContext context) where T : class
         {
-            Emit(null, data, scope);
+            Emit(null, data, context);
         }
 
         [DebuggerHidden]
-        public async Task EmitAsync<T>(T data, TScope scope) where T : class
+        public async Task EmitAsync<T>(T data, TContext context) where T : class
         {
-            await EmitAsync(null, data, scope);
+            await EmitAsync(null, data, context);
         }
 
         [DebuggerHidden]
-        public void EmitMessage<T>(IPipelineMessage<T,TScope> message) where T : class
+        public void EmitMessage<T>(IPipelineMessage<T,TContext> message) where T : class
         {
             RouteMessage(message).Wait();
         }
 
         [DebuggerHidden]
-        public async Task EmitMessageAsync<T>(IPipelineMessage<T, TScope> message) where T : class
+        public async Task EmitMessageAsync<T>(IPipelineMessage<T, TContext> message) where T : class
         {
             await RouteMessage(message);
         }
@@ -406,66 +412,66 @@ namespace Pipes.Abstraction
             Console.WriteLine("Fix forced pipeline termination!");
         }
 
-        public void Terminate(IPipelineComponent<TScope> source)
+        public void Terminate(IPipelineComponent<TContext> source)
         {
             throw new NotImplementedException();
         }
 
         #region - Internal Inteface -
 
-        internal void OnAttach(Action<Pipeline<TScope>> action)
+        internal void OnAttach(Action<Pipeline<TContext>> action)
         {
             _attachActions.Add(action);
         }
 
-        internal void AttachComponent(IPipelineComponent<TScope> component)
+        internal void AttachComponent(IPipelineComponent<TContext> component)
         {
             _components.Add(component);
         }
 
 
-        internal void AddCtor<TComponent>(ConstructorStub<TComponent,TScope> ctor) where TComponent : IPipelineComponent<TScope>
+        internal void AddCtor<TComponent>(ConstructorStub<TComponent,TContext> ctor) where TComponent : IPipelineComponent<TContext>
         {
             _ctors.Add(ctor);
         }
 
-        internal void AddCtorManifold<TComponent>(ConstructorManifoldStub<TComponent, TScope> ctors) where TComponent : IPipelineComponent<TScope>
+        internal void AddCtorManifold<TComponent>(ConstructorManifoldStub<TComponent, TContext> ctors) where TComponent : IPipelineComponent<TContext>
         {
             _ctors.Add(ctors);
         }
 
-        internal void AddInvocation(InvocationStub<TScope> invocation)
+        internal void AddInvocation(InvocationStub<TContext> invocation)
         {
             _invocations.Add(invocation);
         }
 
-        internal void AddTx(TransmitterStub<TScope> tx, IPipelineComponent<TScope> component)
+        internal void AddTx(TransmitterStub<TContext> tx, IPipelineComponent<TContext> component)
         {
             _transmitters.Add(tx);
         }
 
-        internal void AddRx(ReceiverStub<TScope> rx, IPipelineComponent<TScope> component)
+        internal void AddRx(ReceiverStub<TContext> rx, IPipelineComponent<TContext> component)
         {
             _receivers.Add(rx);
         }
 
-        internal void AddTubes(List<Conduit<TScope>> tubes)
+        internal void AddTubes(List<Conduit<TContext>> tubes)
         {
             _tubes.AddRange(tubes);
         }
 
 
         // ReSharper disable once MemberCanBePrivate.Global
-        internal void Emit<T>(IPipelineComponent<TScope> sender, T data, TScope scope) where T : class
+        internal void Emit<T>(IPipelineComponent<TContext> sender, T data, TContext context) where T : class
         {
-            var message = new PipelineMessage<T, TScope>(this, sender, data, scope);
+            var message = new PipelineMessage<T, TContext>(this, sender, data, context);
             EmitMessage(message);
         }
 
         // ReSharper disable once MemberCanBePrivate.Global
-        internal async Task EmitAsync<T>(IPipelineComponent<TScope> sender, T data, TScope scope) where T : class
+        internal async Task EmitAsync<T>(IPipelineComponent<TContext> sender, T data, TContext context) where T : class
         {
-            var message = new PipelineMessage<T, TScope>(this, sender, data, scope);
+            var message = new PipelineMessage<T, TContext>(this, sender, data, context);
             await EmitMessageAsync(message);
         }
 
@@ -475,9 +481,9 @@ namespace Pipes.Abstraction
         #region - Declaration -
 
         // ReSharper disable once MemberCanBeProtected.Global
-        public static Stub<TScope> Component
+        public static Stub<TContext> Component
         {
-            get { return default(Stub<TScope>); }
+            get { return default(Stub<TContext>); }
         }
 
         #endregion

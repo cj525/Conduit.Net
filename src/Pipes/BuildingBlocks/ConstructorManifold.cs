@@ -6,34 +6,34 @@ using Pipes.Stubs;
 
 namespace Pipes.BuildingBlocks
 {
-    internal class ConstructorManifold<TScope> : IPipelineConstructorMany<TScope>
+    internal class ConstructorManifold<TContext> : IPipelineConstructorMany<TContext>
     {
         private readonly int _count;
-        private readonly Pipeline<TScope> _pipeline;
+        private readonly Pipeline<TContext> _pipeline;
 
-        public ConstructorManifold(Pipeline<TScope> pipeline, int count)
+        public ConstructorManifold(Pipeline<TContext> pipeline, int count)
         {
             _pipeline = pipeline;
             _count = count;
         }
 
-        public IPipelineConstructorManyTarget<TComponent,TScope> Using<TComponent>(Func<TComponent> ctor) where TComponent : IPipelineComponent<TScope>
+        public IPipelineConstructorManyTarget<TContext> Using<TComponent>(Func<TComponent> ctor) where TComponent : IPipelineComponent<TContext>
         {
-            return new ConstructorManifold<TComponent,TScope>(_pipeline,_count,ctor);
+            return new ConstructorManifold<TComponent,TContext>(_pipeline,_count,ctor);
         }
     }
-    internal class ConstructorManifold<TComponent,TScope> : BuildingBlock<TScope>, IPipelineConstructorManyTarget<TComponent,TScope> where TComponent : IPipelineComponent<TScope>
+    internal class ConstructorManifold<TComponent,TContext> : BuildingBlock<TContext>, IPipelineConstructorManyTarget<TContext> where TComponent : IPipelineComponent<TContext>
     {
-        private readonly ConstructorManifoldStub<TComponent,TScope> _constructorManifold;
+        private readonly ConstructorManifoldStub<TComponent,TContext> _constructorManifold;
         private bool _blackhole = true;
 
-        public ConstructorManifold(Pipeline<TScope> pipeline, int count, Func<TComponent> ctor)
+        public ConstructorManifold(Pipeline<TContext> pipeline, int count, Func<TComponent> ctor)
             : base(pipeline)
         {
-            _constructorManifold = new ConstructorManifoldStub<TComponent,TScope>(Component, count, ctor);
+            _constructorManifold = new ConstructorManifoldStub<TComponent,TContext>(Component, count, ctor);
         }
 
-        protected override void AttachPipeline(Pipeline<TScope> pipeline)
+        protected override void AttachPipeline(Pipeline<TContext> pipeline)
         {
             if (_blackhole)
                 throw new NotAttachedException("ConstructorManifold is nonfunctional. (ctor without container)");
@@ -42,10 +42,10 @@ namespace Pipes.BuildingBlocks
         }
 
 
-        public void Into(ref Stub<TScope> proxy)
+        public void Into(ref Stub<TContext> proxy)
         {
             _blackhole = false;
-            if (proxy != default(Stub<TScope>))
+            if (proxy != default(Stub<TContext>))
             {
                 throw ProxyAlreadyAssignedException.ForType<TComponent>("Attempted to reuse multi-construction stub.");
             }
@@ -53,7 +53,7 @@ namespace Pipes.BuildingBlocks
             proxy = _constructorManifold;
         }
 
-        public IPipelineConstructorManyTarget<TComponent,TScope> Using(Func<TComponent> ctor)
+        public IPipelineConstructorManyTarget<TContext> Using(Func<TComponent> ctor)
         {
             _blackhole = false;
 

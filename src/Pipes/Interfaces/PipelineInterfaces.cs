@@ -6,86 +6,86 @@ using Pipes.Abstraction;
 namespace Pipes.Interfaces
 {
 
-    public interface IPipelineComponent<TScope>
+    public interface IPipelineComponent<TContext>
     {
-        void TerminateSource(IPipelineMessage<TScope> message);
+        void TerminateSource(IPipelineMessage<TContext> message);
 
         void Build();
 
-        void AttachTo(Pipeline<TScope> pipeline);
+        void AttachTo(Pipeline<TContext> pipeline);
 
-        void OnAttach(Action<Pipeline<TScope>> attachAction);
+        void OnAttach(Action<Pipeline<TContext>> attachAction);
     }
 
-    public interface IPipelineMessage<TScope>
+    public interface IPipelineMessage<TContext>
     {
-        TScope Context { get; }
+        TContext Context { get; }
 
-        IPipelineComponent<TScope> Sender { get; }
+        IPipelineComponent<TContext> Sender { get; }
 
-        IEnumerable<IPipelineMessage<TScope>> Stack { get; }
+        IEnumerable<IPipelineMessage<TContext>> Stack { get; }
 
         IEnumerable<object> DataStack { get; }
         
-        IPipelineMessage<TScope> Top { get; }
+        IPipelineMessage<TContext> Top { get; }
 
-        void Emit<TData>(TData data, TScope scope = default(TScope)) where TData : class;
+        void Emit<TData>(TData data, TContext context = default(TContext)) where TData : class;
 
-        Task EmitAsync<TData>(TData data, TScope scope = default(TScope)) where TData : class;
+        Task EmitAsync<TData>(TData data, TContext context = default(TContext)) where TData : class;
 
-        void EmitChain<TData>(IPipelineComponent<TScope> origin, TData data, TScope scope = default(TScope)) where TData : class;
+        void EmitChain<TData>(IPipelineComponent<TContext> origin, TData data, TContext context = default(TContext)) where TData : class;
 
-        Task EmitChainAsync<TData>(IPipelineComponent<TScope> origin, TData data, TScope scope = default(TScope)) where TData : class;
+        Task EmitChainAsync<TData>(IPipelineComponent<TContext> origin, TData data, TContext context = default(TContext)) where TData : class;
 
         void TerminateSource();
         
-        bool RaiseException(Exception exception, TScope scope = default(TScope));
+        bool RaiseException(Exception exception, TContext context = default(TContext));
     }
 
-    public interface IPipelineMessage<out TData, TScope> : IPipelineMessage<TScope> where TData : class
+    public interface IPipelineMessage<out TData, TContext> : IPipelineMessage<TContext> where TData : class
     {
         TData Data { get; }
     }
 
-    public interface IPipelineMessageReceiver<out TData, TScope> where TData : class
+    public interface IPipelineMessageReceiver<out TData, TContext> where TData : class
     {
         void WhichTriggers(Action action);
         void WhichUnwrapsAndCalls(Action<TData> action);
-        void WhichCalls(Action<IPipelineMessage<TData, TScope>> action);
+        void WhichCalls(Action<IPipelineMessage<TData, TContext>> action);
 
         void WhichTriggersAsync(Func<Task> asyncAction);
         void WhichUnwrapsAndCallsAsync(Func<TData, Task> asyncAction);
-        void WhichCallsAsync(Func<IPipelineMessage<TData, TScope>, Task> asyncAction);
+        void WhichCallsAsync(Func<IPipelineMessage<TData, TContext>, Task> asyncAction);
     }
 
-    public interface IPipelineMessageSingleTarget<TScope>
+    public interface IPipelineMessageSingleTarget<TContext>
     {
-        IPipelineConnectorAsync To(Stub<TScope> target);
+        IPipelineConnectorAsync To(Stub<TContext> target);
     }
 
-    public interface IPipelineMessageTap<out TData, TScope> where TData : class
+    public interface IPipelineMessageTap<out TData, TContext> where TData : class
     {
         IPipelineConnectorAsync WhichTriggers(Action action);
         IPipelineConnectorAsync WhichUnwrapsAndCalls(Action<TData> action);
-        IPipelineConnectorAsync WhichCalls(Action<IPipelineMessage<TData, TScope>> action);
+        IPipelineConnectorAsync WhichCalls(Action<IPipelineMessage<TData, TContext>> action);
 
         IPipelineConnectorAsync WhichTriggersAsync(Func<Task> asyncAction);
         IPipelineConnectorAsync WhichUnwrapsAndCallsAsync(Func<TData, Task> asyncAction);
-        IPipelineConnectorAsync WhichCallsAsync(Func<IPipelineMessage<TData, TScope>, Task> asyncAction);
+        IPipelineConnectorAsync WhichCallsAsync(Func<IPipelineMessage<TData, TContext>, Task> asyncAction);
     }
 
 
 
-    public interface IPipelineConnectorBase<TScope>
+    public interface IPipelineConnectorBase<TContext>
     {
-        IPipelineConnectorAsync SendsMessagesTo(Stub<TScope> target);
+        IPipelineConnectorAsync SendsMessagesTo(Stub<TContext> target);
 
-        IPipelineMessageSingleTarget<TScope> SendsMessage<TData>() where TData : class;
+        IPipelineMessageSingleTarget<TContext> SendsMessage<TData>() where TData : class;
     }
 
-    public interface IPipelineConnector<TScope> : IPipelineConnectorBase<TScope>
+    public interface IPipelineConnector<TContext> : IPipelineConnectorBase<TContext>
     {
-        IPipelineMessageChain<TScope> HasPrivateChannel();
+        IPipelineMessageChain<TContext> HasPrivateChannel();
 
         IPipelineConnectorAsync BroadcastsAllMessages();
 
@@ -109,10 +109,10 @@ namespace Pipes.Interfaces
         IPipelineConnectorAsyncWait WithQueueLengthOf(int queueLength);
     }
 
-    public interface IPipelineMessageChain<TScope>
+    public interface IPipelineMessageChain<TContext>
     {
-        IPipelineConnectorAsync WhichSendsMessagesTo(Stub<TScope> target);
+        IPipelineConnectorAsync WhichSendsMessagesTo(Stub<TContext> target);
 
-        IPipelineMessageSingleTarget<TScope> WhichSendsMessage<T>() where T : class;
+        IPipelineMessageSingleTarget<TContext> WhichSendsMessage<T>() where T : class;
     }
 }

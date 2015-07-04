@@ -4,22 +4,22 @@ using Pipes.Interfaces;
 
 namespace Pipes.Types
 {
-    public class PipelineException<TScope> : Exception 
+    public class PipelineException<TContext> : Exception 
     {
         public Exception Exception { get; private set; }
 
-        public IPipelineMessage<TScope> PipelineMessage { get; private set; }
+        public IPipelineMessage<TContext> PipelineMessage { get; private set; }
         
-        public TScope Scope { get; private set; }
+        public TContext Context { get; private set; }
 
-        private readonly Pipeline<TScope> _pipeline;
+        private readonly Pipeline<TContext> _pipeline;
 
-        public PipelineException(Pipeline<TScope> pipeline, Exception exception, TScope scope, IPipelineMessage<TScope> pipelineMessage = null)
+        public PipelineException(Pipeline<TContext> pipeline, Exception exception, TContext context, IPipelineMessage<TContext> pipelineMessage = null)
         {
             _pipeline = pipeline;
             PipelineMessage = pipelineMessage;
             Exception = exception;
-            Scope = scope;
+            Context = context;
         }
 
         public void TerminatePipeline()
@@ -27,14 +27,14 @@ namespace Pipes.Types
             _pipeline.Terminate();
         }
 
-        public void Emit<T>(T data, TScope scope = default(TScope)) where T : class
+        public void Emit<T>(T data, TContext context = default(TContext)) where T : class
         {
             var source = PipelineMessage == null ? null : PipelineMessage.Sender;
-            if (scope.Equals(default(TScope)))
+            if (context.Equals(default(TContext)))
             {
-                scope = Scope;
+                context = Context;
             }
-            var message = new PipelineMessage<T,TScope>(_pipeline, source, data, scope, PipelineMessage);
+            var message = new PipelineMessage<T,TContext>(_pipeline, source, data, context, PipelineMessage);
             _pipeline.EmitMessage(message);
         }
     }

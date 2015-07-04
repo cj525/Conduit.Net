@@ -12,62 +12,62 @@ namespace Pipes.Abstraction
 {
     public abstract class PipelineComponent : PipelineComponent<object> { }
 
-    public abstract class PipelineComponent<TScope> : IPipelineComponent<TScope>
+    public abstract class PipelineComponent<TContext> : IPipelineComponent<TContext>
     {
-        private readonly List<Action<Pipeline<TScope>>> _attachActions = new List<Action<Pipeline<TScope>>>();
+        private readonly List<Action<Pipeline<TContext>>> _attachActions = new List<Action<Pipeline<TContext>>>();
 
-        private Pipeline<TScope> _pipeline;
+        private Pipeline<TContext> _pipeline;
 
-        protected abstract void Describe(IPipelineComponentBuilder<TScope> thisComponent);
+        protected abstract void Describe(IPipelineComponentBuilder<TContext> thisComponent);
 
-        void IPipelineComponent<TScope>.Build()
+        void IPipelineComponent<TContext>.Build()
         {
-            Describe(new Builder<TScope>(this));
+            Describe(new Builder<TContext>(this));
         }
 
-        void IPipelineComponent<TScope>.OnAttach(Action<Pipeline<TScope>> action)
+        void IPipelineComponent<TContext>.OnAttach(Action<Pipeline<TContext>> action)
         {
             _attachActions.Add(action);
         }
 
-        void IPipelineComponent<TScope>.AttachTo(Pipeline<TScope> pipeline)
+        void IPipelineComponent<TContext>.AttachTo(Pipeline<TContext> pipeline)
         {
             _pipeline = pipeline;
             pipeline.ApplyOver(_attachActions);
         }
-        void IPipelineComponent<TScope>.TerminateSource(IPipelineMessage<TScope> source)
+        void IPipelineComponent<TContext>.TerminateSource(IPipelineMessage<TContext> source)
         {
             _pipeline.Terminate(source.Sender);
         }
 
         [DebuggerHidden]
-        protected void Emit<TData>(TData data, TScope scope = default(TScope)) where TData : class
+        protected void Emit<TData>(TData data, TContext context = default(TContext)) where TData : class
         {
             if (_pipeline == null)
                 throw new NotAttachedException("Unattached Component cannot transmit.");
 
-            _pipeline.EmitMessage(new PipelineMessage<TData,TScope>(_pipeline, this, data, scope));
+            _pipeline.EmitMessage(new PipelineMessage<TData,TContext>(_pipeline, this, data, context));
         }
 
         [DebuggerHidden]
-        protected async Task EmitAsync<TData>(TData data, TScope scope = default(TScope)) where TData : class
+        protected async Task EmitAsync<TData>(TData data, TContext context = default(TContext)) where TData : class
         {
             if (_pipeline == null)
                 throw new NotAttachedException("Unattached Component cannot transmit.");
 
-            await _pipeline.EmitMessageAsync(new PipelineMessage<TData,TScope>(_pipeline, this, data, scope));
+            await _pipeline.EmitMessageAsync(new PipelineMessage<TData,TContext>(_pipeline, this, data, context));
         }
 
         [DebuggerHidden]
-        protected void EmitChain<T>(IPipelineMessage<TScope> message, T data, TScope scope = default(TScope)) where T : class
+        protected void EmitChain<T>(IPipelineMessage<TContext> message, T data, TContext context = default(TContext)) where T : class
         {
-            message.EmitChain(this, data, scope);
+            message.EmitChain(this, data, context);
         }
 
         [DebuggerHidden]
-        protected async Task EmitChainAsync<T>(IPipelineMessage<TScope> message, T data, TScope scope = default(TScope)) where T : class
+        protected async Task EmitChainAsync<T>(IPipelineMessage<TContext> message, T data, TContext context = default(TContext)) where T : class
         {
-            await message.EmitChainAsync(this, data, scope);
+            await message.EmitChainAsync(this, data, context);
         }
 
         protected void Terminate()
@@ -78,9 +78,9 @@ namespace Pipes.Abstraction
         
         protected class EmissionRegistrar
         {
-            private readonly IPipelineComponentBuilder<TScope> _builder;
+            private readonly IPipelineComponentBuilder<TContext> _builder;
 
-            public EmissionRegistrar(IPipelineComponentBuilder<TScope> builder)
+            public EmissionRegistrar(IPipelineComponentBuilder<TContext> builder)
             {
                 _builder = builder;
             }
@@ -102,12 +102,12 @@ namespace Pipes.Abstraction
             return new Observer<TData>(this, null, aux);
         }
 
-        protected Observer<TData> ObserveFor<TData>(IPipelineMessage<TScope> message) where TData : class
+        protected Observer<TData> ObserveFor<TData>(IPipelineMessage<TContext> message) where TData : class
         {
             return new Observer<TData>(this, message, null);
         }
 
-        protected Observer<TData> ObserveFor<TData>(IPipelineMessage<TScope> message, object aux) where TData : class
+        protected Observer<TData> ObserveFor<TData>(IPipelineMessage<TContext> message, object aux) where TData : class
         {
             return new Observer<TData>(this, message, aux);
         }
@@ -126,12 +126,12 @@ namespace Pipes.Abstraction
         }
         public class Observer<TData> : IObserver<TData> where TData : class
         {
-            private readonly PipelineComponent<TScope> _component;
-            private readonly IPipelineMessage<TScope> _message;
+            private readonly PipelineComponent<TContext> _component;
+            private readonly IPipelineMessage<TContext> _message;
             private readonly object _aux;
             private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
-            public Observer(PipelineComponent<TScope> component, IPipelineMessage<TScope> message, object aux)
+            public Observer(PipelineComponent<TContext> component, IPipelineMessage<TContext> message, object aux)
             {
                 _aux = aux;
                 _message = message;

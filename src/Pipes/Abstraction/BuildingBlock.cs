@@ -2,22 +2,22 @@ using Pipes.Interfaces;
 
 namespace Pipes.Abstraction
 {
-    public abstract class BuildingBlock<TScope>
+    public abstract class BuildingBlock<TContext>
     {
-        protected readonly IPipelineComponent<TScope> Component;
+        protected readonly IPipelineComponent<TContext> Component;
 
-        protected BuildingBlock(IPipelineComponent<TScope> component)
+        protected BuildingBlock(IPipelineComponent<TContext> component)
         {
             Component = component;
 
             component.OnAttach(AttachPipeline);
         }
 
-        protected BuildingBlock(Pipeline<TScope> pipeline)
+        protected BuildingBlock(Pipeline<TContext> pipeline)
         {
             pipeline.OnAttach(AttachPipeline);
         }
 
-        protected abstract void AttachPipeline(Pipeline<TScope> pipeline);
+        protected abstract void AttachPipeline(Pipeline<TContext> pipeline);
     }
 }

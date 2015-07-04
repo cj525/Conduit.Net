@@ -5,23 +5,23 @@ using Pipes.Interfaces;
 
 namespace Pipes.Stubs
 {
-    public class TransmitterStub<TScope> : Stub<TScope>
+    public class TransmitterStub<TContext> : Stub<TContext>
     {
-        protected TransmitterStub(IPipelineComponent<TScope> component, Type containedType) : base(component,containedType)
+        protected TransmitterStub(IPipelineComponent<TContext> component, Type containedType) : base(component,containedType)
         {
         }
     }
 
-    public class TransmitterStub<T,TScope> : TransmitterStub<TScope> where T : class
+    public class TransmitterStub<T,TContext> : TransmitterStub<TContext> where T : class
     {
-        public TransmitterStub(IPipelineComponent<TScope> component): base(component, typeof(T))
+        public TransmitterStub(IPipelineComponent<TContext> component): base(component, typeof(T))
         {
         }
 
 
-        public async Task Emit(T data, TScope scope)
+        public async Task Emit(T data, TContext context)
         {
-            await Pipeline.EmitAsync(Component, data, scope);
+            await Pipeline.EmitAsync(Component, data, context);
         }
 
 
