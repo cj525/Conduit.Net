@@ -8,7 +8,9 @@ using Pipes.Stubs;
 
 namespace Pipes.BuildingBlocks
 {
-    internal class Receiver<TData,TContext> : BuildingBlock<TContext>, IPipelineMessageReceiver<TData,TContext> where TData : class
+    internal class Receiver<TData, TContext> : BuildingBlock<TContext>, IPipelineMessageReceiver<TData, TContext>
+        where TData : class
+        where TContext : class
     {
         private readonly ReceiverStub<TData,TContext> _receiver;
         private readonly MessageTarget<TData,TContext> _messageTarget;

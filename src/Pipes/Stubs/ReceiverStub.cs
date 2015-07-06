@@ -7,7 +7,7 @@ using Pipes.Interfaces;
 
 namespace Pipes.Stubs
 {
-    public abstract class ReceiverStub<TContext> : Stub<TContext>
+    public abstract class ReceiverStub<TContext> : Stub<TContext> where TContext : class
     {
         protected ReceiverStub(IPipelineComponent<TContext> component, Type containedType) : base(component,containedType)
         {
@@ -31,7 +31,9 @@ namespace Pipes.Stubs
         }
     }
 
-    public class ReceiverStub<TData,TContext> : ReceiverStub<TContext> where TData : class
+    public class ReceiverStub<TData, TContext> : ReceiverStub<TContext>
+        where TData : class
+        where TContext : class
     {
         private Func<IPipelineMessage<TData, TContext>, Task> _bridge = msg => { throw new NotImplementedException("Pipeline Receiver is not attached"); };
 

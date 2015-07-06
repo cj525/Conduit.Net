@@ -4,7 +4,9 @@ using Pipes.Interfaces;
 
 namespace Pipes.Stubs
 {
-    public class ConstructorStub<TComponent, TContext> : Stub<TContext> where TComponent : IPipelineComponent<TContext>
+    public class ConstructorStub<TComponent, TContext> : Stub<TContext>
+        where TComponent : IPipelineComponent<TContext>
+        where TContext : class
     {
         private readonly Lazy<TComponent> _instance;
 

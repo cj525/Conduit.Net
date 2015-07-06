@@ -6,7 +6,7 @@ using Pipes.Stubs;
 
 namespace Pipes.BuildingBlocks
 {
-    internal class ConstructorManifold<TContext> : IPipelineConstructorMany<TContext>
+    internal class ConstructorManifold<TContext> : IPipelineConstructorMany<TContext> where TContext : class
     {
         private readonly int _count;
         private readonly Pipeline<TContext> _pipeline;
@@ -22,7 +22,9 @@ namespace Pipes.BuildingBlocks
             return new ConstructorManifold<TComponent,TContext>(_pipeline,_count,ctor);
         }
     }
-    internal class ConstructorManifold<TComponent,TContext> : BuildingBlock<TContext>, IPipelineConstructorManyTarget<TContext> where TComponent : IPipelineComponent<TContext>
+    internal class ConstructorManifold<TComponent, TContext> : BuildingBlock<TContext>, IPipelineConstructorManyTarget<TContext>
+        where TComponent : IPipelineComponent<TContext>
+        where TContext : class
     {
         private readonly ConstructorManifoldStub<TComponent,TContext> _constructorManifold;
         private bool _blackhole = true;

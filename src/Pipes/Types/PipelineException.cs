@@ -4,7 +4,7 @@ using Pipes.Interfaces;
 
 namespace Pipes.Types
 {
-    public class PipelineException<TContext> : Exception 
+    public class PipelineException<TContext> : Exception where TContext : class
     {
         public Exception Exception { get; private set; }
 

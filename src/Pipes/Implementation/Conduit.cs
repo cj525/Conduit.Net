@@ -11,7 +11,7 @@ using Pipes.Stubs;
 
 namespace Pipes.Implementation
 {
-    internal class Conduit<TContext> : IPipelineConnectorAsync, IPipelineConnectorAsyncBuffered
+    internal class Conduit<TContext> : IPipelineConnectorAsync, IPipelineConnectorAsyncBuffered where TContext : class
     {
 
         public static int DefaultBufferLength = 1000;

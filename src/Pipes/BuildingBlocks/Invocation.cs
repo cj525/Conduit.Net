@@ -7,7 +7,9 @@ using Pipes.Stubs;
 
 namespace Pipes.BuildingBlocks
 {
-    internal class Invocation<TData, TContext> : BuildingBlock<TContext>, IPipelineInvocation<TContext> where TData : class
+    internal class Invocation<TData, TContext> : BuildingBlock<TContext>, IPipelineInvocation<TContext>
+        where TData : class
+        where TContext : class
     {
         private readonly InvocationStub<TData,TContext> _proxy;
         private bool _blackhole = true;

@@ -2,7 +2,7 @@ using Pipes.Interfaces;
 
 namespace Pipes.Abstraction
 {
-    public abstract class BuildingBlock<TContext>
+    public abstract class BuildingBlock<TContext> where TContext : class
     {
         protected readonly IPipelineComponent<TContext> Component;
 

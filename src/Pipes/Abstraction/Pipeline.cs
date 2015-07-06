@@ -13,9 +13,7 @@ using Pipes.Types;
 
 namespace Pipes.Abstraction
 {
-    public abstract class Pipeline : Pipeline<Object> { }
-
-    public abstract class Pipeline<TContext> : IDisposable  
+    public abstract class Pipeline<TContext> : IDisposable where TContext : class
     {
         private readonly Type _thisType;
 
@@ -39,7 +37,7 @@ namespace Pipes.Abstraction
 
         public PipelineException<TContext> FatalException { get; private set; }
         
-        public IEnumerable<IPipelineComponent<TContext>> Components { get { return _components; } } 
+        //public IEnumerable<IPipelineComponent<TContext>> Components { get { return _components; } } 
 
         public int MessagesInFlight { get { return _messagesInFlight; } }
 
@@ -89,14 +87,12 @@ namespace Pipes.Abstraction
             // Apply their building blocks
             _components.Apply(component => component.AttachTo(this));
 
-            // Connect external communication
-            // This will add new rx's
-            _taps.Apply(tap => tap.AttachTo(this));
 
             // Connect internal communication
             _receivers.Apply(rx => rx.AttachTo(this));
             _transmitters.Apply(tx => tx.AttachTo(this));
         }
+
         private void GenerateAndConnectConduits()
         {
             // Gather sender's types
@@ -179,9 +175,32 @@ namespace Pipes.Abstraction
             }
 
 
+            var tapSlots = AttachTaps();
+
+            // Lastly add invocations
+            foreach (var invocation in _invocations)
+            {
+                var messageType = invocation.ContainedType;
+                if (!tapSlots.ContainsKey(messageType))
+                    tapSlots.Add(messageType, new List<Conduit<TContext>>());
+                var mSlot = tapSlots[messageType];
+                var linv = invocation;
+                // ReSharper disable once LoopCanBeConvertedToQuery
+                foreach (var rx in _receivers.Where(rx => rx.Component != null && rx.Component.GetType() == linv.Target.ContainedType && messageType.IsAssignableFrom(rx.ContainedType)))
+                {
+                    var lrx = rx;
+                    var tCtor = _ctors.FirstOrDefault(ctor => ctor.ContainedType == lrx.Component.GetType());
+                    mSlot.Add(new Conduit<TContext>(invocation, tCtor, messageType) { Receiver = rx });
+                }
+
+            }
+        }
+
+        private Dictionary<Type, List<Conduit<TContext>>> AttachTaps()
+        {
             // Add taps sender slot
-            var tapSlot = new Dictionary<Type, List<Conduit<TContext>>>();
-            _conduits.Add(_thisType, tapSlot);
+            var tapSlots = new Dictionary<Type, List<Conduit<TContext>>>();
+            _conduits.Add(_thisType, tapSlots);
 
             // Now add all the taps
             foreach (var tap in _taps)
@@ -213,31 +232,14 @@ namespace Pipes.Abstraction
                 }
 
                 // Create message slot for this sender
-                if (!tapSlot.ContainsKey(messageType))
-                    tapSlot.Add(messageType, new List<Conduit<TContext>>());
-                var mSlot = tapSlot[messageType];
+                if (!tapSlots.ContainsKey(messageType))
+                    tapSlots.Add(messageType, new List<Conduit<TContext>>());
+                var mSlot = tapSlots[messageType];
                 mSlot.Add(tap);
 
                 //mSlot.Add(tap);
             }
-
-            // Lastly add invocations
-            foreach (var invocation in _invocations)
-            {
-                var messageType = invocation.ContainedType;
-                if (!tapSlot.ContainsKey(messageType))
-                    tapSlot.Add(messageType, new List<Conduit<TContext>>());
-                var mSlot = tapSlot[messageType];
-                var linv = invocation;
-                // ReSharper disable once LoopCanBeConvertedToQuery
-                foreach (var rx in _receivers.Where(rx => rx.Component != null && rx.Component.GetType() == linv.Target.ContainedType && messageType.IsAssignableFrom(rx.ContainedType)))
-                {
-                    var lrx = rx;
-                    var tCtor = _ctors.FirstOrDefault(ctor => ctor.ContainedType == lrx.Component.GetType());
-                    mSlot.Add(new Conduit<TContext>(invocation, tCtor, messageType) { Receiver = rx });
-                }
-
-            }
+            return tapSlots;
         }
 
         //[DebuggerHidden]

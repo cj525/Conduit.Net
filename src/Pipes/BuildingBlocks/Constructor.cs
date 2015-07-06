@@ -6,7 +6,9 @@ using Pipes.Stubs;
 
 namespace Pipes.BuildingBlocks
 {
-    internal class Constructor<TComponent, TContext> : BuildingBlock<TContext>, IPipelineConstructor<TContext> where TComponent : IPipelineComponent<TContext>
+    internal class Constructor<TComponent, TContext> : BuildingBlock<TContext>, IPipelineConstructor<TContext>
+        where TComponent : IPipelineComponent<TContext>
+        where TContext : class
     {
         private readonly Func<TComponent> _ctor;
 

@@ -6,7 +6,7 @@ using Pipes.Interfaces;
 
 namespace Pipes.Abstraction
 {
-    public abstract class Stub<TContext> : IPipelineConnector<TContext>
+    public abstract class Stub<TContext> : IPipelineConnector<TContext> where TContext : class
     {
         protected Pipeline<TContext> Pipeline;
 

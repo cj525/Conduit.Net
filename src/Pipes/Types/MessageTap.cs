@@ -9,6 +9,7 @@ using Pipes.Stubs;
 namespace Pipes.Types
 {
     internal abstract class MessageTap<TContext> : Conduit<TContext>
+        where TContext : class
     {
         protected bool Blackhole;
 
@@ -19,7 +20,9 @@ namespace Pipes.Types
             
         }
     }
-    internal class MessageTap<TData, TContext> : MessageTap<TContext>, IDisposable, IPipelineMessageTap<TData,TContext> where TData : class
+    internal class MessageTap<TData, TContext> : MessageTap<TContext>, IDisposable, IPipelineMessageTap<TData,TContext> 
+        where TData : class
+        where TContext : class
     {
         private readonly MessageTarget<TData,TContext> _messageTarget;
         private readonly ReceiverStub<TData,TContext> _rxStub;

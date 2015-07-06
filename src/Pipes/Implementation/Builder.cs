@@ -6,7 +6,7 @@ using Pipes.Interfaces;
 
 namespace Pipes.Implementation
 {
-    internal class Builder<TContext> : IPipelineBuilder<TContext>, IPipelineComponentBuilder<TContext>
+    internal class Builder<TContext> : IPipelineBuilder<TContext>, IPipelineComponentBuilder<TContext> where TContext : class
     {
         private readonly IPipelineComponent<TContext> _component;
         private readonly Pipeline<TContext> _pipeline;
@@ -74,12 +74,12 @@ namespace Pipes.Implementation
             return this;
         }
 
-        public IPipelineMessageReceiver<T,TContext> Receives<T>() where T : class
+        public IPipelineMessageReceiver<TData,TContext> Receives<TData>() where TData : class
         {
             if (_component == null)
                 throw new ApplicationException("Can't create receiver on pipeline.");
             
-            return new Receiver<T,TContext>(_component);
+            return new Receiver<TData,TContext>(_component);
         }
     }
 }
