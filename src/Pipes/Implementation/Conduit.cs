@@ -15,13 +15,12 @@ namespace Pipes.Implementation
     {
 
         public static int DefaultBufferLength = 1000;
-
+        private object _lockObject = new {};
         private List<Conduit<TContext>> _manifold;
         private MessageQueueThread _queueThread;
         private MessageQueueThread[] _queueThreads;
         private int _poolPtr;
         private bool _isManifold;
-
 
         internal ReceiverStub<TContext> Receiver;
 
@@ -86,7 +85,7 @@ namespace Pipes.Implementation
         }
 
         [DebuggerHidden]
-        internal async Task Invoke(IPipelineMessage<TContext> message)
+        internal Task Invoke(IPipelineMessage<TContext> message)
         {
             if (Receiver == null && !_isManifold)
                 throw new NotAttachedException("Conduit is not attached.");
@@ -95,12 +94,12 @@ namespace Pipes.Implementation
             {
                 if (Receiver != null)
                 {
-                    await Receiver.Receive(message);
+                    return Receiver.Receive(message);
                 }
                 else
                 {
                     var target = _manifold[NextPtr()];
-                    await target.Invoke(message);
+                    return target.Invoke(message);
                 }
             }
             else
@@ -108,22 +107,33 @@ namespace Pipes.Implementation
                 if (!Pooled)
                 {
                     if (_queueThread == null)
-                        _queueThread = new MessageQueueThread(Target.ContainedType.Name);
-
+                    {
+                        lock (_lockObject)
+                        {
+                            if (_queueThread == null)
+                                _queueThread = new MessageQueueThread(Target.ContainedType.Name);
+                        }
+                    }
                     // == true for mono bug
                     _queueThread.Enqueue(WithWait == true? () => Receiver.Receive(message).Wait() : (Action) (() => Receiver.Receive(message)));
 
                     if (!_queueThread.IsStarted)
                     {
-                        _queueThread.MaxQueueLength = QueueLength;
-                        _queueThread.Start();
+                        lock (_lockObject)
+                        {
+                            if (!_queueThread.IsStarted)
+                            {
+                                _queueThread.MaxQueueLength = QueueLength;
+                                _queueThread.Start();
+                            }
+                        }
                     }
                 }
                 else
                 {
                     if (!_isManifold)
                     {
-                        ThreadPool.QueueUserWorkItem(state => Receiver.Receive(message));
+                        ThreadPool.QueueUserWorkItem(state => Receiver.Receive(message).Wait());
                     }
                     else
                     {
@@ -149,13 +159,7 @@ namespace Pipes.Implementation
                     }
                 }
             }
-            await Abstraction.Target.EmptyTask;
-        }
-
-        private void EnqueueOnManifold(IPipelineMessage<TContext> message)
-        {
-            var target = _manifold[_poolPtr];
-            
+            return Abstraction.Target.EmptyTask;
         }
 
         private int NextPtr()
@@ -183,15 +187,16 @@ namespace Pipes.Implementation
             };
         }
 
-        //internal void Shutdown()
-        //{
-        //    if( _queueThread != null )
-        //        _queueThread.Shutdown();
-        //}
+        internal void Shutdown()
+        {
+            if (_queueThread != null)
+                _queueThread.Shutdown();
+        }
 
         public void Dispose()
         {
-            _queueThread.Stop();
+            if( _queueThread != null )
+                _queueThread.Stop();
         }
 
         internal class Partial<T> : Conduit<TContext>, IPipelineMessageSingleTarget<TContext> where T : class

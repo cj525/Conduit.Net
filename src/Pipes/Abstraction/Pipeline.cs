@@ -33,7 +33,7 @@ namespace Pipes.Abstraction
 
         private Action<PipelineException<TContext>> _exceptionHandler;
 
-        private int _messagesInFlight;
+        public int _messagesInFlight;
 
         public PipelineException<TContext> FatalException { get; private set; }
         
@@ -361,12 +361,12 @@ namespace Pipes.Abstraction
 
         public async Task Shutdown()
         {
-            //_conduits.SelectMany(kv => kv.Value).SelectMany(kv => kv.Value).Where(conduit => conduit.OffThread).Apply(conduit => conduit.Shutdown());
             while (_messagesInFlight > 0)
             {
-                // Continually yield this thread until messages have stopped
-                await Task.Delay(15);
+                await Task.Delay(100);
             }
+
+            _conduits.SelectMany(kv => kv.Value).SelectMany(kv => kv.Value).Where(conduit => conduit.OffThread).Apply(conduit => conduit.Shutdown());
         }
 
         public IPipelineMessageTap<T,TContext> CreateMessageTap<T>() where T : class
@@ -388,9 +388,9 @@ namespace Pipes.Abstraction
         }
 
         [DebuggerHidden]
-        public async Task EmitAsync<T>(T data, TContext context) where T : class
+        public Task EmitAsync<T>(T data, TContext context) where T : class
         {
-            await EmitAsync(null, data, context);
+            return EmitAsync(null, data, context);
         }
 
         [DebuggerHidden]
@@ -400,16 +400,14 @@ namespace Pipes.Abstraction
         }
 
         [DebuggerHidden]
-        public async Task EmitMessageAsync<T>(IPipelineMessage<T, TContext> message) where T : class
+        public Task EmitMessageAsync<T>(IPipelineMessage<T, TContext> message) where T : class
         {
-            await RouteMessage(message);
+            return RouteMessage(message);
         }
 
         public virtual void Dispose()
         {
-            // Go through all queue threads and order instant death
-            // Dispose of things
-            Console.WriteLine("Fix pipeline disposal!");
+            Task.WaitAll(Shutdown());
         }
 
         public void Terminate()
@@ -474,10 +472,10 @@ namespace Pipes.Abstraction
         }
 
         // ReSharper disable once MemberCanBePrivate.Global
-        internal async Task EmitAsync<T>(IPipelineComponent<TContext> sender, T data, TContext context) where T : class
+        internal Task EmitAsync<T>(IPipelineComponent<TContext> sender, T data, TContext context) where T : class
         {
             var message = new PipelineMessage<T, TContext>(this, sender, data, context);
-            await EmitMessageAsync(message);
+            return EmitMessageAsync(message);
         }
 
 

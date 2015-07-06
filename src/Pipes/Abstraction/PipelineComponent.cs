@@ -50,12 +50,12 @@ namespace Pipes.Abstraction
         }
 
         [DebuggerHidden]
-        protected async Task EmitAsync<TData>(TData data, TContext context = default(TContext)) where TData : class
+        protected Task EmitAsync<TData>(TData data, TContext context = default(TContext)) where TData : class
         {
             if (_pipeline == null)
                 throw new NotAttachedException("Unattached Component cannot transmit.");
 
-            await _pipeline.EmitMessageAsync(new PipelineMessage<TData,TContext>(_pipeline, this, data, context));
+            return _pipeline.EmitMessageAsync(new PipelineMessage<TData,TContext>(_pipeline, this, data, context));
         }
 
         [DebuggerHidden]
@@ -68,12 +68,12 @@ namespace Pipes.Abstraction
         }
 
         [DebuggerHidden]
-        protected async Task EmitChainAsync<T>(IPipelineMessage<TContext> message, T data, TContext context = default(TContext)) where T : class
+        protected Task EmitChainAsync<T>(IPipelineMessage<TContext> message, T data, TContext context = default(TContext)) where T : class
         {
             if (context == default(TContext))
                 context = message.Context;
 
-            await message.EmitChainAsync(this, data, context);
+            return message.EmitChainAsync(this, data, context);
         }
 
         protected void Terminate()
@@ -130,7 +130,8 @@ namespace Pipes.Abstraction
                 Aux = aux;
             }
         }
-        public class Observer<TData> : IObserver<TData> where TData : class
+        public class Observer<TData> : IObserver<TData>
+            where TData : class
         {
             private readonly PipelineComponent<TContext> _component;
             private readonly IPipelineMessage<TContext> _message;

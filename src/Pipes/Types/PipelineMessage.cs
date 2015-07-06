@@ -62,13 +62,14 @@ namespace Pipes.Types
         }
 
         [DebuggerHidden]
-        public async Task EmitAsync<TData>(TData data, TContext context = default(TContext)) where TData : class
+        public Task EmitAsync<TData>(TData data, TContext context = default(TContext)) where TData : class
         {
             if (context == null || context.Equals(default(TContext)))
             {
                 context = Context;
             }
-            await _pipeline.EmitMessageAsync(new PipelineMessage<TData, TContext>(_pipeline, Sender, data, context, this));
+            
+            return _pipeline.EmitMessageAsync(new PipelineMessage<TData, TContext>(_pipeline, Sender, data, context, this));
         }
 
         [DebuggerHidden]
@@ -82,13 +83,14 @@ namespace Pipes.Types
         }
 
         [DebuggerHidden]
-        public async Task EmitChainAsync<TData>(IPipelineComponent<TContext> origin, TData data, TContext context = default(TContext)) where TData : class
+        public Task EmitChainAsync<TData>(IPipelineComponent<TContext> origin, TData data, TContext context = default(TContext)) where TData : class
         {
             if (context == null || context.Equals(default(TContext)))
             {
                 context = Context;
             }
-            await _pipeline.EmitMessageAsync(new PipelineMessage<TData, TContext>(_pipeline, origin, data, context, this));
+            
+            return _pipeline.EmitMessageAsync(new PipelineMessage<TData, TContext>(_pipeline, origin, data, context, this));
         }
 
         public bool RaiseException(Exception exception, TContext context = default(TContext))
