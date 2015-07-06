@@ -61,12 +61,18 @@ namespace Pipes.Abstraction
         [DebuggerHidden]
         protected void EmitChain<T>(IPipelineMessage<TContext> message, T data, TContext context = default(TContext)) where T : class
         {
+            if (context == default(TContext))
+                context = message.Context;
+
             message.EmitChain(this, data, context);
         }
 
         [DebuggerHidden]
         protected async Task EmitChainAsync<T>(IPipelineMessage<TContext> message, T data, TContext context = default(TContext)) where T : class
         {
+            if (context == default(TContext))
+                context = message.Context;
+
             await message.EmitChainAsync(this, data, context);
         }
 

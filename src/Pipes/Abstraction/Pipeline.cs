@@ -87,6 +87,9 @@ namespace Pipes.Abstraction
             // Apply their building blocks
             _components.Apply(component => component.AttachTo(this));
 
+            // Connect external communication
+            // This will add new rx's
+            _taps.Apply(tap => tap.AttachTo(this));
 
             // Connect internal communication
             _receivers.Apply(rx => rx.AttachTo(this));
