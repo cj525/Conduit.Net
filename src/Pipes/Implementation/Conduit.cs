@@ -191,12 +191,13 @@ namespace Pipes.Implementation
         {
             if (_queueThread != null)
                 _queueThread.Shutdown();
+
+            _queueThread = null;
         }
 
         public void Dispose()
         {
-            if( _queueThread != null )
-                _queueThread.Stop();
+            Shutdown();
         }
 
         internal class Partial<T> : Conduit<TContext>, IPipelineMessageSingleTarget<TContext> where T : class
