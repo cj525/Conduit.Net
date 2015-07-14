@@ -8,16 +8,18 @@ namespace Pipes.Stubs
         where TComponent : IPipelineComponent<TContext>
         where TContext : class
     {
-        private readonly Lazy<TComponent> _instance;
+        private readonly Func<TComponent> _ctor;
 
         public ConstructorStub(IPipelineComponent<TContext> component, Func<TComponent> ctor) : base(component, typeof(TComponent)) 
         {
-            _instance = new Lazy<TComponent>(ctor);
+            _ctor = ctor;
         }
 
         internal override void AttachTo(Pipeline<TContext> pipeline)
         {
-            pipeline.AttachComponent(_instance.Value);
+            var instance = _ctor();
+
+            pipeline.AttachComponent(instance);
 
             base.AttachTo(pipeline);
         }

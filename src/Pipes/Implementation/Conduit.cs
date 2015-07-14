@@ -96,11 +96,13 @@ namespace Pipes.Implementation
                 {
                     return Receiver.Receive(message);
                 }
-                else
+                if (_manifold != null)
                 {
                     var target = _manifold[NextPtr()];
                     return target.Invoke(message);
                 }
+
+                throw new NotAttachedException("Can't find receiver or manifold while routing message.");
             }
             else
             {

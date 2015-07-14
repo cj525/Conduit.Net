@@ -33,13 +33,9 @@ namespace Pipes.Abstraction
 
         private Action<PipelineException<TContext>> _exceptionHandler;
 
-        public int _messagesInFlight;
-
         public PipelineException<TContext> FatalException { get; private set; }
         
         //public IEnumerable<IPipelineComponent<TContext>> Components { get { return _components; } } 
-
-        public int MessagesInFlight { get { return _messagesInFlight; } }
 
         protected Pipeline()
         {
@@ -52,6 +48,10 @@ namespace Pipes.Abstraction
         /// </summary>
         /// <param name="thisPipeline"></param>
         protected abstract void Describe(IPipelineBuilder<TContext> thisPipeline);
+
+        protected abstract void MessageInFlight<T>(IPipelineMessage<T, TContext> message) where T : class;
+
+        protected abstract void MessageCompleted<T>(IPipelineMessage<T, TContext> message) where T : class;
 
         protected virtual async Task HandleUnknownMessage<T>(IPipelineMessage<T, TContext> message) where T : class
         {
@@ -250,7 +250,7 @@ namespace Pipes.Abstraction
         {
             try
             {
-                Interlocked.Increment(ref _messagesInFlight);
+                MessageInFlight(message);
 
                 var senderType = message.Sender == null ? _thisType : message.Sender.GetType();
                 if (!_conduits.ContainsKey(senderType))
@@ -313,7 +313,7 @@ namespace Pipes.Abstraction
             }
             finally
             {
-                Interlocked.Decrement(ref _messagesInFlight);
+                MessageCompleted(message);
             }
 
         }
@@ -359,13 +359,8 @@ namespace Pipes.Abstraction
             _exceptionHandler = null;
         }
 
-        public async Task Shutdown()
+        public void Shutdown()
         {
-            while (_messagesInFlight > 0)
-            {
-                await Task.Delay(100);
-            }
-
             _conduits.SelectMany(kv => kv.Value).SelectMany(kv => kv.Value).Where(conduit => conduit.OffThread).Apply(conduit => conduit.Shutdown());
         }
 
@@ -407,7 +402,7 @@ namespace Pipes.Abstraction
 
         public virtual void Dispose()
         {
-            Task.WaitAll(Shutdown());
+            Shutdown();
         }
 
         public void Terminate()
@@ -417,7 +412,7 @@ namespace Pipes.Abstraction
 
         public void Terminate(IPipelineComponent<TContext> source)
         {
-            throw new NotImplementedException();
+            Console.WriteLine("Fix component-requested pipeline termination!");
         }
 
         #region - Internal Inteface -
