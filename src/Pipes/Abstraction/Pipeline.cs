@@ -53,11 +53,7 @@ namespace Pipes.Abstraction
 
         protected abstract void MessageCompleted<T>(IPipelineMessage<T, TContext> message) where T : class;
 
-        protected virtual async Task HandleUnknownMessage<T>(IPipelineMessage<T, TContext> message) where T : class
-        {
-            Console.WriteLine("** Unknown message in pipeline of type: " + typeof(T));
-            await Target.EmptyTask;
-        }
+        protected abstract Task HandleUnknownMessage<T>(IPipelineMessage<T, TContext> message) where T : class;
 
         /// <summary>
         /// Build and attach all pipeline components
@@ -245,7 +241,7 @@ namespace Pipes.Abstraction
             return tapSlots;
         }
 
-        //[DebuggerHidden]
+        [DebuggerHidden]
         internal async Task RouteMessage<T>(IPipelineMessage<T,TContext> message) where T : class
         {
             try

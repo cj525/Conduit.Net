@@ -5,6 +5,10 @@ using Pipes.Abstraction;
 
 namespace Pipes.Interfaces
 {
+    public interface IFaultablePipelineContext
+    {
+        bool IsFaulted { get; }
+    }
     public interface IPipelineComponent<TContext> where TContext : class
     {
         void TerminateSource(IPipelineMessage<TContext> message);

@@ -41,7 +41,7 @@ namespace Pipes.Stubs
             // By this point validation has been done, direct cast
             return _bridge((IPipelineMessage<TData, TContext>)message);
 
-            //////Console.WriteLine("- Receiving {0} on Thread {1}", ((IPipelineMessage<object>)message).Data.GetType().Name, Thread.CurrentThread.ManagedThreadId);
+            //////Log("- Receiving {0} on Thread {1}", ((IPipelineMessage<object>)message).Data.GetType().Name, Thread.CurrentThread.ManagedThreadId);
             ////var handledAwait = default(Task);
             ////// async keyword not needed, chain maintained on Task
             ////try
