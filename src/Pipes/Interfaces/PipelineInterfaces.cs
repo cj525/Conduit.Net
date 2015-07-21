@@ -11,8 +11,6 @@ namespace Pipes.Interfaces
     }
     public interface IPipelineComponent<TContext> where TContext : class
     {
-        void TerminateSource(IPipelineMessage<TContext> message);
-
         void Build();
 
         void AttachTo(Pipeline<TContext> pipeline);
@@ -39,10 +37,8 @@ namespace Pipes.Interfaces
         void EmitChain<TData>(IPipelineComponent<TContext> origin, TData data, TContext context = default(TContext)) where TData : class;
 
         Task EmitChainAsync<TData>(IPipelineComponent<TContext> origin, TData data, TContext context = default(TContext)) where TData : class;
-
-        void TerminateSource();
         
-        bool RaiseException(Exception exception, TContext context = default(TContext));
+        bool HandleException(Exception exception);
     }
 
     public interface IPipelineMessage<out TData, TContext> : IPipelineMessage<TContext>

@@ -6,34 +6,20 @@ namespace Pipes.Types
 {
     public class PipelineException<TContext> : Exception where TContext : class
     {
-        public Exception Exception { get; private set; }
-
         public IPipelineMessage<TContext> PipelineMessage { get; private set; }
         
-        public TContext Context { get; private set; }
-
         private readonly Pipeline<TContext> _pipeline;
 
-        public PipelineException(Pipeline<TContext> pipeline, Exception exception, TContext context, IPipelineMessage<TContext> pipelineMessage = null)
+        public PipelineException(Pipeline<TContext> pipeline, Exception exception, IPipelineMessage<TContext> pipelineMessage) : base("Pipeline Exception", exception)
         {
             _pipeline = pipeline;
             PipelineMessage = pipelineMessage;
-            Exception = exception;
-            Context = context;
         }
 
-        public void TerminatePipeline()
-        {
-            _pipeline.Terminate();
-        }
-
+        // TODO: Consider deleting this
         public void Emit<T>(T data, TContext context = default(TContext)) where T : class
         {
-            var source = PipelineMessage == null ? null : PipelineMessage.Sender;
-            if (context.Equals(default(TContext)))
-            {
-                context = Context;
-            }
+            var source = PipelineMessage.Sender;
             var message = new PipelineMessage<T,TContext>(_pipeline, source, data, context, PipelineMessage);
             _pipeline.EmitMessage(message);
         }

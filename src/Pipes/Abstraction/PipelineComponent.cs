@@ -35,10 +35,6 @@ namespace Pipes.Abstraction
             _pipeline = pipeline;
             pipeline.ApplyOver(_attachActions);
         }
-        void IPipelineComponent<TContext>.TerminateSource(IPipelineMessage<TContext> source)
-        {
-            _pipeline.Terminate(source.Sender);
-        }
 
         [DebuggerHidden]
         protected void Emit<TData>(TData data, TContext context = default(TContext)) where TData : class
@@ -157,15 +153,15 @@ namespace Pipes.Abstraction
                 _disposables.Apply(item => item.Dispose());
             }
 
-            public void OnError(Exception error)
+            public void OnError(Exception exception)
             {
                 if (_message != null)
                 {
-                    _message.RaiseException(error);
-
+                    if (!_message.HandleException(exception))
+                        throw new OperationCanceledException("Unhandled observer exception",exception);
                 }
                 else
-                    _component.Emit(error);
+                    _component.Emit(exception);
 
                 _disposables.Apply(item => item.Dispose());
             }

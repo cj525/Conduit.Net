@@ -19,7 +19,8 @@ namespace Pipes.Types
 
         public TContext Context { get; private set; }
 
-
+        public bool IsCancelled { get; set; }
+        
         protected PipelineMessage(Pipeline<TContext> pipeline, IPipelineComponent<TContext> sender, TContext context, IPipelineMessage<TContext> previous = null)
         {
             _pipeline = pipeline;
@@ -92,17 +93,11 @@ namespace Pipes.Types
             
             return _pipeline.EmitMessageAsync(new PipelineMessage<TData, TContext>(_pipeline, origin, data, context, this));
         }
-
-        public bool RaiseException(Exception exception, TContext context = default(TContext))
+        public bool HandleException(Exception exception)
         {
-            var pipelineException = new PipelineException<TContext>(_pipeline, exception, context, this);
+            var pipelineException = new PipelineException<TContext>(_pipeline, exception, this);
 
             return _pipeline.HandleException(pipelineException); ;
-        }
-
-        public void TerminateSource()
-        {
-            Sender.TerminateSource(this);
         }
     }
 

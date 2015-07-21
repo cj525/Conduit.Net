@@ -31,10 +31,10 @@ namespace Pipes.Abstraction
         private readonly Dictionary<Type, Dictionary<Type, List<Conduit<TContext>>>> _conduits = new Dictionary<Type, Dictionary<Type, List<Conduit<TContext>>>>();
         private readonly List<Conduit<TContext>> _tubes = new List<Conduit<TContext>>();
 
-        private Action<PipelineException<TContext>> _exceptionHandler;
-
-        public PipelineException<TContext> FatalException { get; private set; }
+        private Func<PipelineException<TContext>,bool> _exceptionHandler;
         
+        private bool _terminated;
+
         //public IEnumerable<IPipelineComponent<TContext>> Components { get { return _components; } } 
 
         protected Pipeline()
@@ -53,7 +53,12 @@ namespace Pipes.Abstraction
 
         protected abstract void MessageCompleted<T>(IPipelineMessage<T, TContext> message) where T : class;
 
-        protected abstract Task HandleUnknownMessage<T>(IPipelineMessage<T, TContext> message) where T : class;
+        protected abstract void HandleUnknownMessage<T>(IPipelineMessage<T, TContext> message) where T : class;
+
+        protected internal virtual bool HandleException(PipelineException<TContext> pipelineException)
+        {
+            return false;
+        }
 
         /// <summary>
         /// Build and attach all pipeline components
@@ -244,6 +249,9 @@ namespace Pipes.Abstraction
         [DebuggerHidden]
         internal async Task RouteMessage<T>(IPipelineMessage<T,TContext> message) where T : class
         {
+            if( _terminated )
+                throw new OperationCanceledException("Pipeline has been terminated.");
+
             try
             {
                 MessageInFlight(message);
@@ -264,13 +272,13 @@ namespace Pipes.Abstraction
 
                     if (!targets.Any())
                     {
-                        if (dataType.IsAssignableFrom(typeof(Exception)))
+                        if (dataType.IsAssignableFrom(typeof(Exception)) && _exceptionHandler != null)
                         {
-                            message.RaiseException(message.Data as Exception);
+                            _exceptionHandler(new PipelineException<TContext>(this, message.Data as Exception, message));
                         }
                         else
                         {
-                            await HandleUnknownMessage(message);
+                            HandleUnknownMessage(message);
                         }
                     }
                 }
@@ -295,16 +303,12 @@ namespace Pipes.Abstraction
 
                     await targets[0].Invoke(message);
                 }
-                catch (PipelineException<TContext> exception)
+                catch (PipelineException<TContext> pipelineException)
                 {
-                    // Maybe someone will inspect this outside of the upcoming explosion's catcher
-                    FatalException = exception;
+                    if (_exceptionHandler == null)
+                        throw;
 
-                    // There was no handler so shutdown the pipe and explode!
-                    Dispose();
-
-                    // And boom goes the dynamite
-                    throw;
+                    _exceptionHandler(pipelineException);
                 }
             }
             finally
@@ -314,24 +318,7 @@ namespace Pipes.Abstraction
 
         }
 
-        internal bool HandleException(PipelineException<TContext> pipelineException)
-        {
-            if (_exceptionHandler == null)
-                return false;
-
-            _exceptionHandler(pipelineException);
-
-            return true;
-        }
-
-
-
-        //protected void Analyze()
-        //{
-        //    Describe(new Analyzer(this));
-        //}
-
-
+        // ReSharper disable once MemberCanBePrivate.Global
         public void ConstructWith(IPipelineBuilder<TContext> builder)
         {
             // Figure out what I need and what I do (get my building blocks)
@@ -367,7 +354,7 @@ namespace Pipes.Abstraction
             return tap;
         }
 
-        public void SuppressExceptions(Action<PipelineException<TContext>> exceptionHandler)
+        public void SuppressExceptions(Func<PipelineException<TContext>,bool> exceptionHandler)
         {
             _exceptionHandler = exceptionHandler;
         }
@@ -403,12 +390,7 @@ namespace Pipes.Abstraction
 
         public void Terminate()
         {
-            Console.WriteLine("Fix forced pipeline termination!");
-        }
-
-        public void Terminate(IPipelineComponent<TContext> source)
-        {
-            Console.WriteLine("Fix component-requested pipeline termination!");
+            _terminated = true;
         }
 
         #region - Internal Inteface -
