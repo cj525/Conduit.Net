@@ -295,6 +295,7 @@ namespace Pipes.Abstraction
                         return;
                     }
 
+
                     if (targets.Length > 1)
                     {
                         await Task.WhenAll(targets.Select(each => each.Invoke(message)));
@@ -308,7 +309,16 @@ namespace Pipes.Abstraction
                     if (_exceptionHandler == null)
                         throw;
 
-                    _exceptionHandler(pipelineException);
+                    if (!_exceptionHandler(pipelineException))
+                        throw;
+                }
+                catch (Exception exception)
+                {
+                    if (_exceptionHandler == null)
+                        throw;
+
+                    if (!_exceptionHandler(new PipelineException<TContext>(this, exception, message)))
+                        throw;
                 }
             }
             finally
