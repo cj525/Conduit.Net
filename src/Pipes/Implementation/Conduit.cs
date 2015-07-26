@@ -8,6 +8,7 @@ using Pipes.Abstraction;
 using Pipes.Exceptions;
 using Pipes.Interfaces;
 using Pipes.Stubs;
+using Pipes.Types;
 
 namespace Pipes.Implementation
 {
@@ -17,10 +18,9 @@ namespace Pipes.Implementation
         public static int DefaultBufferLength = 1000;
         private object _lockObject = new {};
         private List<Conduit<TContext>> _manifold;
-        private MessageQueueThread _queueThread;
-        private MessageQueueThread[] _queueThreads;
+        private QueueThread _queueThread;
+        private QueueThread[] _queueThreads;
         private int _poolPtr;
-        private bool _isManifold;
 
         internal ReceiverStub<TContext> Receiver;
 
@@ -55,31 +55,22 @@ namespace Pipes.Implementation
             return this;
         }
 
-        public IPipelineConnectorAsyncWait InParallel()
+        public void InParallel()
         {
             OffThread = true;
             Pooled = true;
-            return this;
         }
 
-        public IPipelineConnectorAsyncWait WithQueueLengthOf(int queueLength)
+        public void WithQueueLengthOf(int queueLength)
         {
             QueueLength = queueLength;
-            return this;
         }
-
-        public void WithoutWaiting()
-        {
-            WithWait = false;
-        }
-
 
         internal List<Conduit<TContext>> AsManifold()
         {
             if (_manifold == null)
             {
                 _manifold = new List<Conduit<TContext>>();
-                _isManifold = true;
             }
             return _manifold;
         }
@@ -87,80 +78,80 @@ namespace Pipes.Implementation
         [DebuggerHidden]
         internal Task Invoke(IPipelineMessage<TContext> message)
         {
-            if (Receiver == null && !_isManifold)
-                throw new NotAttachedException("Conduit is not attached.");
-
             if (!OffThread)
             {
                 if (Receiver != null)
                 {
                     return Receiver.Receive(message);
                 }
+
                 if (_manifold != null)
                 {
                     var target = _manifold[NextPtr()];
                     return target.Invoke(message);
                 }
 
-                throw new NotAttachedException("Can't find receiver or manifold while routing message.");
+                if (Receiver == null && _manifold == null)
+                    throw new NotAttachedException("Conduit is not attached.");
+            }
+            else if (!Pooled)
+            {
+                if (_queueThread == null)
+                {
+                    lock (_lockObject)
+                    {
+                        if (_queueThread == null)
+                            _queueThread = new QueueThread(Target.ContainedType.Name);
+                    }
+                }
+                // == true for mono bug
+                _queueThread.Enqueue(() => Receiver.Receive(message));
+
+                // Double-check pattern does work, check Lazy<T> if you don't believe me
+                if (!_queueThread.WasStarted)
+                {
+                    lock (_lockObject)
+                    {
+                        if (!_queueThread.WasStarted)
+                        {
+                            _queueThread.MaxQueueLength = QueueLength;
+                            _queueThread.Start();
+                        }
+                    }
+                }
             }
             else
             {
-                if (!Pooled)
+                if (_manifold == null)
                 {
-                    if (_queueThread == null)
-                    {
-                        lock (_lockObject)
-                        {
-                            if (_queueThread == null)
-                                _queueThread = new MessageQueueThread(Target.ContainedType.Name);
-                        }
-                    }
-                    // == true for mono bug
-                    _queueThread.Enqueue(WithWait == true? () => Receiver.Receive(message).Wait() : (Action) (() => Receiver.Receive(message)));
-
-                    if (!_queueThread.IsStarted)
-                    {
-                        lock (_lockObject)
-                        {
-                            if (!_queueThread.IsStarted)
-                            {
-                                _queueThread.MaxQueueLength = QueueLength;
-                                _queueThread.Start();
-                            }
-                        }
-                    }
+                    ThreadPool.QueueUserWorkItem(state => Receiver.Receive(message).Wait());
                 }
                 else
                 {
-                    if (!_isManifold)
+                    var count = _manifold.Count;
+                    // Double-check pattern does work, check Lazy<T> if you don't believe me
+                    if( _queueThreads == null )
                     {
-                        ThreadPool.QueueUserWorkItem(state => Receiver.Receive(message).Wait());
-                    }
-                    else
-                    {
-                        var count = _manifold.Count;
-                        if (_queueThreads == null)
-                            lock (_manifold)
-                            {
-                                if (_queueThreads == null)
-                                {
-                                    _queueThreads = Enumerable.Range(0, count).Select(index => new MessageQueueThread(String.Format("{0} {1}/{2}", Target.ContainedType.Name, index, count))).ToArray();
-                                }
-
-                            }
-
-                        lock (_queueThreads)
+                        lock( _manifold )
                         {
-                            var ptr = NextPtr();
-                            var thread = _queueThreads[ptr];
-                            var target = _manifold[ptr];
-                            
-                            thread.Enqueue(() => target.Invoke(message).Wait());
+                            if( _queueThreads == null )
+                            {
+                                _queueThreads = Enumerable.Range( 0, count ).Select( index => new QueueThread( String.Format( "{0} {1}/{2}", Target.ContainedType.Name, index, count ) ) ).ToArray();
+                            }
                         }
+                    }
+
+                    lock (_queueThreads)
+                    {
+                        var ptr = NextPtr();
+                        var thread = _queueThreads[ptr];
+                        var target = _manifold[ptr];
+                            
+                        thread.Enqueue(() => target.Invoke(message));
                     }
                 }
             }
+
             return Abstraction.Target.EmptyTask;
         }
 
@@ -192,7 +183,7 @@ namespace Pipes.Implementation
         internal void Shutdown()
         {
             if (_queueThread != null)
-                _queueThread.Shutdown();
+                _queueThread.WaitForEmpty();
 
             _queueThread = null;
         }

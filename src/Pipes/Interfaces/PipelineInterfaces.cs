@@ -5,10 +5,6 @@ using Pipes.Abstraction;
 
 namespace Pipes.Interfaces
 {
-    public interface IFaultablePipelineContext
-    {
-        bool IsFaulted { get; }
-    }
     public interface IPipelineComponent<TContext> where TContext : class
     {
         void Build();
@@ -101,17 +97,12 @@ namespace Pipes.Interfaces
     {
         IPipelineConnectorAsyncBuffered OnSeparateThread();
 
-        IPipelineConnectorAsyncWait InParallel();
+        void InParallel();
     }
 
-    public interface IPipelineConnectorAsyncWait
+    public interface IPipelineConnectorAsyncBuffered
     {
-        void WithoutWaiting();
-    }
-
-    public interface IPipelineConnectorAsyncBuffered : IPipelineConnectorAsyncWait
-    {
-        IPipelineConnectorAsyncWait WithQueueLengthOf(int queueLength);
+        void WithQueueLengthOf(int queueLength);
     }
 
     public interface IPipelineMessageChain<TContext> where TContext : class

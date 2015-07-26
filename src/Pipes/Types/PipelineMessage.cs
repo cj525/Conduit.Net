@@ -93,6 +93,7 @@ namespace Pipes.Types
             
             return _pipeline.EmitMessageAsync(new PipelineMessage<TData, TContext>(_pipeline, origin, data, context, this));
         }
+
         public bool HandleException(Exception exception)
         {
             var pipelineException = new PipelineException<TContext>(_pipeline, exception, this);
@@ -113,5 +114,4 @@ namespace Pipes.Types
 
         public TData Data { get; private set; }
     }
-
 }

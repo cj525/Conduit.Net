@@ -126,6 +126,7 @@ namespace Pipes.Abstraction
                 Aux = aux;
             }
         }
+
         public class Observer<TData> : IObserver<TData>
             where TData : class
         {

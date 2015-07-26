@@ -54,7 +54,7 @@
     <Compile Include="Exceptions\ProxyAlreadyAssignedException.cs" />
     <Compile Include="Extensions\Extensions.cs" />
     <Compile Include="Implementation\Conduit.cs" />
-    <Compile Include="Implementation\MessageQueueThread.cs" />
+    <Compile Include="Types\QueueThread.cs" />
     <Compile Include="Implementation\MessageTarget.cs" />
     <Compile Include="Interfaces\BuilderInterfaces.cs" />
     <Compile Include="Interfaces\PipelineInterfaces.cs" />

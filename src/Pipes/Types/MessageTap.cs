@@ -20,6 +20,7 @@ namespace Pipes.Types
             
         }
     }
+
     internal class MessageTap<TData, TContext> : MessageTap<TContext>, IDisposable, IPipelineMessageTap<TData,TContext> 
         where TData : class
         where TContext : class
@@ -80,7 +81,7 @@ namespace Pipes.Types
         }
 
         public IPipelineConnectorAsync WhichTriggersAsync(Func<Task> target)
-        {
+         {
             Blackhole = false;
             _messageTarget.Set(target);
 
