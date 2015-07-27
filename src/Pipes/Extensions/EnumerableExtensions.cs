@@ -2,12 +2,14 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace Pipes.Extensions
 {
     public static class EnumerableExtensions
     {
         [DebuggerStepThrough]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static T[] Apply<T>(this IEnumerable<T> source, Action<T> action)
         {
             // Prevent multiple applies as side-effect to multiple enumeration 
@@ -19,13 +21,9 @@ namespace Pipes.Extensions
             return array;
         }
 
-        [DebuggerStepThrough]
-        internal static void ApplyOver<T>(this T target, IEnumerable<Action<T>> source)
-        {
-            source.Apply(item => item(target));
-        }
 
         [DebuggerStepThrough]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static IEnumerable<T> If<T>(this IEnumerable<T> source, bool test, Func<IEnumerable<T>, IEnumerable<T>> apply)
         {
             return test ? apply(source) : source;

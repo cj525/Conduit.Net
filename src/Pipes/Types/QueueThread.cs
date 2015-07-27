@@ -119,7 +119,8 @@ namespace Pipes.Types
                 return;
             
             // Wait for work to stop
-            while (!_quit)
+            var quit = false;
+            while (!quit)
             {
                 lock (_bufferMutex)
                 {
@@ -127,7 +128,7 @@ namespace Pipes.Types
                     if (_workQueue.Count + _backBuffer.Count == 0)
                     {
                         // Exit thread loop
-                        _quit = true;
+                        quit = _quit = true;
 
                         // Disengage lock
                         _waitForWorkEvent.Set();
@@ -144,7 +145,8 @@ namespace Pipes.Types
 
         private void ThreadLoop()
         {
-            while (!_quit)
+            var quit = false;
+            while (!quit)
             {
                 // Locals
                 Action[] workList = null;
@@ -184,6 +186,11 @@ namespace Pipes.Types
 
                     // Perform the work
                     work();
+                }
+
+                lock( _bufferMutex )
+                {
+                    quit = _quit;
                 }
             }
 

@@ -52,7 +52,8 @@
     <Compile Include="Exceptions\BadAttachmentException.cs" />
     <Compile Include="Exceptions\NotAttachedException.cs" />
     <Compile Include="Exceptions\ProxyAlreadyAssignedException.cs" />
-    <Compile Include="Extensions\Extensions.cs" />
+    <Compile Include="Extensions\EnumerableExtensions.cs" />
+    <Compile Include="Extensions\GenericExtensions.cs" />
     <Compile Include="Implementation\Conduit.cs" />
     <Compile Include="Types\QueueThread.cs" />
     <Compile Include="Implementation\MessageTarget.cs" />
