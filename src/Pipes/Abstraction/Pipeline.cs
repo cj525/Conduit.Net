@@ -354,6 +354,7 @@ namespace Pipes.Abstraction
 
         public void Shutdown()
         {
+            // This method (and the entire code graph under it) must be idempotent
             _conduits.SelectMany(kv => kv.Value).SelectMany(kv => kv.Value).Where(conduit => conduit.OffThread).Apply(conduit => conduit.Shutdown());
         }
 
