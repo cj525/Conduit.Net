@@ -136,7 +136,6 @@ namespace Pipes.Abstraction
             private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
             private bool _emitComplete = true;
-            private bool _emitNext = true;
             private bool _emitError = true;
 
             public Observer(PipelineComponent<TContext> component, IPipelineMessage<TContext> message, object aux)
@@ -166,7 +165,10 @@ namespace Pipes.Abstraction
                 if (!_emitError || _message != null)
                 {
                     if (!_message.HandleException(exception))
-                        throw new OperationCanceledException("Unhandled observer exception",exception);
+                    {
+                        _disposables.Apply(item => item.Dispose());
+                        throw new OperationCanceledException("Unhandled observer exception", exception);
+                    }
                 }
                 else
                     _component.Emit(exception);
