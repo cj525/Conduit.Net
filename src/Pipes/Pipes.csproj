@@ -55,6 +55,7 @@
     <Compile Include="Extensions\EnumerableExtensions.cs" />
     <Compile Include="Extensions\GenericExtensions.cs" />
     <Compile Include="Implementation\Conduit.cs" />
+    <Compile Include="Types\OperationContext.cs" />
     <Compile Include="Types\QueueThread.cs" />
     <Compile Include="Implementation\MessageTarget.cs" />
     <Compile Include="Interfaces\BuilderInterfaces.cs" />

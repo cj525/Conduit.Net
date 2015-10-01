@@ -135,6 +135,10 @@ namespace Pipes.Abstraction
             private readonly object _aux;
             private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
+            private bool _emitComplete = true;
+            private bool _emitNext = true;
+            private bool _emitError = true;
+
             public Observer(PipelineComponent<TContext> component, IPipelineMessage<TContext> message, object aux)
             {
                 _aux = aux;
@@ -146,17 +150,20 @@ namespace Pipes.Abstraction
             {
                 var complete = new ObservationComplete<TData>(_aux);
 
-                if (_message != null)
-                    _component.EmitChain(_message, complete);
-                else
-                    _component.Emit(complete);
+                if (_emitComplete)
+                {
+                    if (_message != null)
+                        _component.EmitChain(_message, complete);
+                    else
+                        _component.Emit(complete);
+                }
 
                 _disposables.Apply(item => item.Dispose());
             }
 
             public void OnError(Exception exception)
             {
-                if (_message != null)
+                if (!_emitError || _message != null)
                 {
                     if (!_message.HandleException(exception))
                         throw new OperationCanceledException("Unhandled observer exception",exception);
@@ -169,8 +176,8 @@ namespace Pipes.Abstraction
 
             public void OnNext(TData value)
             {
-                if( _message != null )
-                    _component.EmitChain( _message, value );
+                if (_message != null)
+                    _component.EmitChain(_message, value);
                 else
                     _component.Emit(value);
             }
@@ -178,6 +185,22 @@ namespace Pipes.Abstraction
             public Observer<TData> WithDisposal(IDisposable disposable)
             {
                 _disposables.Add(disposable);
+                return this;
+            }
+
+            public Observer<TData> DontEmitControlMessages()
+            {
+                _emitComplete = false;
+                _emitError = false;
+
+                return this;
+            }
+
+            public Observer<TData> ConfigureEmits(bool onError = false, bool onComplete = false)
+            {
+                _emitComplete = onComplete;
+                _emitError = onError;
+
                 return this;
             }
         }
