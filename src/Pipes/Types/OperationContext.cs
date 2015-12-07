@@ -5,12 +5,14 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Pipes.Extensions;
+using Pipes.Interfaces;
 
 namespace Pipes.Types
 {
-    public class OperationContext : IDisposable
+    public class OperationContext : IDisposable, IOperationContext
     {
         private readonly List<Action> _onComplete = new List<Action>();
+        private readonly List<Action> _onCancelled = new List<Action>();
 
         protected readonly Dictionary<Type, object> Adjuncts = new Dictionary<Type, object>();
 
@@ -20,12 +22,76 @@ namespace Pipes.Types
 
         public bool IsCancelled { get; private set; }
 
+        public void RegisterOnCancellationAction(Action action)
+        {
+            _onCancelled.Add(action);
+        }
+
+        /// <summary>
+        /// Marks the context as cancelled and cancels any <see cref="ICancellable"/> adjuncts
+        /// </summary>
         public virtual void Cancel()
         {
+            // Cancel anything that can be cancelled
+            RetrieveDerived<ICancellable>()?.Apply(adjunct => adjunct.Cancel());
+
+            // Fire any cancellation actions
+            _onCancelled.Apply(action => action());
+
+            // Store flag for any code that uses polling methodology
             IsCancelled = true;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public virtual void Close() { }
+
+
+
+        public bool IsCompleted 
+        {
+            get
+            {
+                if (_messagesInFlight < 0)
+                    throw new DataMisalignedException("Messages In Flight is less than 0.");
+
+                if (_contextHolds < 0)
+                    throw new DataMisalignedException("Context Holds is less than 0.");
+
+                return _messagesInFlight == 0 && _contextHolds == 0;
+            }
+        }
+
+        public void RegisterOnCompleteAction(Action action)
+        {
+            _onComplete.Add(action);
+        }
+
+
+        public virtual void Completed()
+        {
+            _onComplete.Apply(fn => fn());
+        }
+
+        public virtual CompletionManifold BranchCompletion()
+        {
+            return (CompletionManifold)Replace<ICompletable>(completionEntry => completionEntry.Branch());
+        }
+
+
+
+        public void AcquireContextHold()
+        {
+            Interlocked.Increment(ref _contextHolds);
+        }
+
+        public void ReleaseContextHold()
+        {
+            Interlocked.Decrement(ref _contextHolds);
+        }
+
+
 
         public T Store<T>(T adjunct)
         {
@@ -101,37 +167,6 @@ namespace Pipes.Types
             return new DisposableContextHold(this);
         }
 
-        public void AcquireContextHold()
-        {
-            Interlocked.Increment(ref _contextHolds);
-        }
-
-        public void ReleaseContextHold()
-        {
-            Interlocked.Decrement(ref _contextHolds);
-        }
-
-        public bool IsComplete()
-        {
-            if (_messagesInFlight < 0)
-                throw new DataMisalignedException("Messages In Flight is less than 0.");
-
-            if (_contextHolds < 0)
-                throw new DataMisalignedException("Context Holds is less than 0.");
-
-            return _messagesInFlight == 0 && _contextHolds == 0;
-        }
-
-        public void OnComplete(Action action)
-        {
-            _onComplete.Add(action);
-        }
-
-
-        public void Completed()
-        {
-            _onComplete.Apply(fn => fn());
-        }
 
         public async Task WaitForIdle()
         {

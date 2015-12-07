@@ -10,7 +10,7 @@ namespace Pipes.BuildingBlocks
 {
     internal class Receiver<TData, TContext> : BuildingBlock<TContext>, IPipelineMessageReceiver<TData, TContext>
         where TData : class
-        where TContext : class
+        where TContext : class, IOperationContext
     {
         private readonly ReceiverStub<TData,TContext> _receiver;
         private readonly MessageTarget<TData,TContext> _messageTarget;

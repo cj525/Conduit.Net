@@ -6,7 +6,7 @@ using Pipes.Interfaces;
 
 namespace Pipes.Stubs
 {
-    public abstract class ConstructorManifoldStub<TContext> : Stub<TContext> where TContext : class
+    public abstract class ConstructorManifoldStub<TContext> : Stub<TContext> where TContext : class, IOperationContext
     {
         protected ConstructorManifoldStub(IPipelineComponent<TContext> component, Type type) : base(component, type)
         {
@@ -15,7 +15,7 @@ namespace Pipes.Stubs
     }
     public class ConstructorManifoldStub<TComponent, TContext> : ConstructorManifoldStub<TContext>
         where TComponent : IPipelineComponent<TContext>
-        where TContext : class
+        where TContext : class, IOperationContext
     {
         private readonly ConstructorStub<TComponent,TContext>[] _contents;
 

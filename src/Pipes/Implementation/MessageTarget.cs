@@ -8,7 +8,7 @@ namespace Pipes.Implementation
 {
     internal class MessageTarget<TData, TContext> : Target
         where TData : class
-        where TContext : class
+        where TContext : class, IOperationContext
     {
         private Func<IPipelineMessage<TData, TContext>, Task> _bridge;
 

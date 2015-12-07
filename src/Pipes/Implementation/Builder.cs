@@ -6,7 +6,7 @@ using Pipes.Interfaces;
 
 namespace Pipes.Implementation
 {
-    internal class Builder<TContext> : IPipelineBuilder<TContext>, IPipelineComponentBuilder<TContext> where TContext : class
+    internal class Builder<TContext> : IPipelineBuilder<TContext>, IPipelineComponentBuilder<TContext> where TContext : class, IOperationContext
     {
         private readonly IPipelineComponent<TContext> _component;
         private readonly Pipeline<TContext> _pipeline;

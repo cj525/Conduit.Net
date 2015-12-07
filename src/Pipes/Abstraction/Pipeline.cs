@@ -13,7 +13,7 @@ using Pipes.Types;
 
 namespace Pipes.Abstraction
 {
-    public abstract class Pipeline<TContext> : IDisposable where TContext : class
+    public abstract class Pipeline<TContext> : IDisposable where TContext : class, IOperationContext
     {
         private readonly Type _thisType;
 
@@ -51,7 +51,10 @@ namespace Pipes.Abstraction
 
         protected abstract void MessageInFlight<T>(IPipelineMessage<T, TContext> message) where T : class;
 
-        protected abstract void MessageCompleted<T>(IPipelineMessage<T, TContext> message) where T : class;
+        protected virtual void MessageCompleted<T>(IPipelineMessage<T, TContext> message) where T : class
+        {
+            message.Context.MessageCompleted();
+        }
 
         protected abstract void HandleUnknownMessage<T>(IPipelineMessage<T, TContext> message) where T : class;
 

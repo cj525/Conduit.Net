@@ -8,7 +8,7 @@ using Pipes.Interfaces;
 
 namespace Pipes.Types
 {
-    public abstract class PipelineMessage<TContext> : IPipelineMessage<TContext> where TContext : class
+    public abstract class PipelineMessage<TContext> : IPipelineMessage<TContext> where TContext : class, IOperationContext
     {
         // ReSharper disable once MemberCanBeProtected.Global
         private readonly Pipeline<TContext> _pipeline;
@@ -105,7 +105,7 @@ namespace Pipes.Types
 
     public class PipelineMessage<TData, TContext> : PipelineMessage<TContext>, IPipelineMessage<TData, TContext>
         where TData : class
-        where TContext : class
+        where TContext : class, IOperationContext
     {
         internal PipelineMessage(Pipeline<TContext> pipeline, IPipelineComponent<TContext> sender, TData data, TContext context, IPipelineMessage<TContext> previous = null) : base( pipeline, sender, context, previous )
         {

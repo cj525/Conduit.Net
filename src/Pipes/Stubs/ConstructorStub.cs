@@ -6,7 +6,7 @@ namespace Pipes.Stubs
 {
     public class ConstructorStub<TComponent, TContext> : Stub<TContext>
         where TComponent : IPipelineComponent<TContext>
-        where TContext : class
+        where TContext : class, IOperationContext
     {
         private readonly Func<TComponent> _ctor;
 

@@ -12,7 +12,7 @@ namespace Pipes.Abstraction
 {
     //public abstract class PipelineComponent : PipelineComponent<object> { }
 
-    public abstract class PipelineComponent<TContext> : IPipelineComponent<TContext> where TContext : class
+    public abstract class PipelineComponent<TContext> : IPipelineComponent<TContext> where TContext : class, IOperationContext
     {
         private readonly List<Action<Pipeline<TContext>>> _attachActions = new List<Action<Pipeline<TContext>>>();
 

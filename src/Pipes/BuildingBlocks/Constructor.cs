@@ -8,7 +8,7 @@ namespace Pipes.BuildingBlocks
 {
     internal class Constructor<TComponent, TContext> : BuildingBlock<TContext>, IPipelineConstructor<TContext>
         where TComponent : IPipelineComponent<TContext>
-        where TContext : class
+        where TContext : class, IOperationContext
     {
         private readonly Func<TComponent> _ctor;
 

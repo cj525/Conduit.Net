@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 
 namespace Pipes.Extensions
 {
@@ -10,8 +11,11 @@ namespace Pipes.Extensions
     {
         [DebuggerStepThrough]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static T[] Apply<T>(this IEnumerable<T> source, Action<T> action)
+        public static T[] Apply<T>(this IEnumerable<T> source, Action<T> action)
         {
+            if (source == null)
+                return default(T[]);
+
             // Prevent multiple applies as side-effect to multiple enumeration 
             var array = source.ToArray();
 
@@ -20,6 +24,13 @@ namespace Pipes.Extensions
 
             return array;
         }
+
+        //[DebuggerStepThrough]
+        //public static void ApplyAndWait<T>(this IEnumerable<T> source, Func<T, Task> action)
+        //{
+        //    Task.WaitAll(source.Select(action).ToArray());
+        //}
+
 
 
         [DebuggerStepThrough]

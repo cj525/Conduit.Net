@@ -1,11 +1,12 @@
 using System;
 using System.Threading.Tasks;
 using Pipes.Abstraction;
+using Pipes.Interfaces;
 using Pipes.Types;
 
 namespace Pipes.Stubs
 {
-    public abstract class InvocationStub<TContext> : Stub<TContext> where TContext : class
+    public abstract class InvocationStub<TContext> : Stub<TContext> where TContext : class, IOperationContext
     {
         internal Stub<TContext> Target;
 
@@ -18,7 +19,7 @@ namespace Pipes.Stubs
 
     public class InvocationStub<TData, TContext> : InvocationStub<TContext>
         where TData : class
-        where TContext : class
+        where TContext : class, IOperationContext
     {
 
         public InvocationStub() : base(typeof(TData))

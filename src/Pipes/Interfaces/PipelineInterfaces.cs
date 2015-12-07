@@ -5,7 +5,7 @@ using Pipes.Abstraction;
 
 namespace Pipes.Interfaces
 {
-    public interface IPipelineComponent<TContext> where TContext : class
+    public interface IPipelineComponent<TContext> where TContext : class, IOperationContext
     {
         void Build();
 
@@ -14,7 +14,7 @@ namespace Pipes.Interfaces
         void OnAttach(Action<Pipeline<TContext>> attachAction);
     }
 
-    public interface IPipelineMessage<TContext> where TContext : class
+    public interface IPipelineMessage<TContext> where TContext : class, IOperationContext
     {
         TContext Context { get; }
 
@@ -39,14 +39,14 @@ namespace Pipes.Interfaces
 
     public interface IPipelineMessage<out TData, TContext> : IPipelineMessage<TContext>
         where TData : class
-        where TContext : class
+        where TContext : class, IOperationContext
     {
         TData Data { get; }
     }
 
     public interface IPipelineMessageReceiver<out TData, TContext>
         where TData : class
-        where TContext : class
+        where TContext : class, IOperationContext
     {
         void WhichTriggers(Action action);
         void WhichUnwrapsAndCalls(Action<TData> action);
@@ -57,14 +57,14 @@ namespace Pipes.Interfaces
         void WhichCallsAsync(Func<IPipelineMessage<TData, TContext>, Task> asyncAction);
     }
 
-    public interface IPipelineMessageSingleTarget<TContext> where TContext : class
+    public interface IPipelineMessageSingleTarget<TContext> where TContext : class, IOperationContext
     {
         IPipelineConnectorAsync To(Stub<TContext> target);
     }
 
     public interface IPipelineMessageTap<out TData, TContext>
         where TData : class
-        where TContext : class
+        where TContext : class, IOperationContext
     {
         IPipelineConnectorAsync WhichTriggers(Action action);
         IPipelineConnectorAsync WhichUnwrapsAndCalls(Action<TData> action);
@@ -77,14 +77,14 @@ namespace Pipes.Interfaces
 
 
 
-    public interface IPipelineConnectorBase<TContext> where TContext : class
+    public interface IPipelineConnectorBase<TContext> where TContext : class, IOperationContext
     {
         IPipelineConnectorAsync SendsMessagesTo(Stub<TContext> target);
 
         IPipelineMessageSingleTarget<TContext> SendsMessage<TData>() where TData : class;
     }
 
-    public interface IPipelineConnector<TContext> : IPipelineConnectorBase<TContext> where TContext : class
+    public interface IPipelineConnector<TContext> : IPipelineConnectorBase<TContext> where TContext : class, IOperationContext
     {
         IPipelineMessageChain<TContext> HasPrivateChannel();
 
@@ -105,7 +105,7 @@ namespace Pipes.Interfaces
         void WithQueueLengthOf(int queueLength);
     }
 
-    public interface IPipelineMessageChain<TContext> where TContext : class
+    public interface IPipelineMessageChain<TContext> where TContext : class, IOperationContext
     {
         IPipelineConnectorAsync WhichSendsMessagesTo(Stub<TContext> target);
 

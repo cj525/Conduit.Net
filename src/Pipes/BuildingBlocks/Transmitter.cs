@@ -6,7 +6,7 @@ namespace Pipes.BuildingBlocks
 {
     internal class Transmitter<TData, TContext> : BuildingBlock<TContext>
         where TData : class
-        where TContext : class
+        where TContext : class, IOperationContext
     {
         private readonly TransmitterStub<TData,TContext> _tx;
 

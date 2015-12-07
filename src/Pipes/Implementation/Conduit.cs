@@ -12,7 +12,7 @@ using Pipes.Types;
 
 namespace Pipes.Implementation
 {
-    internal class Conduit<TContext> : IPipelineConnectorAsync, IPipelineConnectorAsyncBuffered where TContext : class
+    internal class Conduit<TContext> : IPipelineConnectorAsync, IPipelineConnectorAsyncBuffered where TContext : class, IOperationContext
     {
 
         public static int DefaultBufferLength = 1000;
@@ -182,8 +182,7 @@ namespace Pipes.Implementation
 
         internal void Shutdown()
         {
-            if (_queueThread != null)
-                _queueThread.WaitForEmpty();
+            _queueThread?.WaitForEmpty();
 
             _queueThread = null;
         }
