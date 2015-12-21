@@ -36,23 +36,23 @@ namespace Pipes.Abstraction
             pipeline.ApplyOver(_attachActions);
         }
 
-        [DebuggerHidden]
-        protected void Emit<TData>(TData data, TContext context = default(TContext)) where TData : class
-        {
-            if (_pipeline == null)
-                throw new NotAttachedException("Unattached Component cannot transmit.");
+        //[DebuggerHidden]
+        //protected void Emit<TData>(TData data, TContext context = default(TContext)) where TData : class
+        //{
+        //    if (_pipeline == null)
+        //        throw new NotAttachedException("Unattached Component cannot transmit.");
 
-            _pipeline.EmitMessage(new PipelineMessage<TData,TContext>(_pipeline, this, data, context));
-        }
+        //    _pipeline.EmitMessage(new PipelineMessage<TData,TContext>(_pipeline, this, data, context));
+        //}
 
-        [DebuggerHidden]
-        protected Task EmitAsync<TData>(TData data, TContext context = default(TContext)) where TData : class
-        {
-            if (_pipeline == null)
-                throw new NotAttachedException("Unattached Component cannot transmit.");
+        //[DebuggerHidden]
+        //protected Task EmitAsync<TData>(TData data, TContext context = default(TContext)) where TData : class
+        //{
+        //    if (_pipeline == null)
+        //        throw new NotAttachedException("Unattached Component cannot transmit.");
 
-            return _pipeline.EmitMessageAsync(new PipelineMessage<TData,TContext>(_pipeline, this, data, context));
-        }
+        //    return _pipeline.EmitMessageAsync(new PipelineMessage<TData,TContext>(_pipeline, this, data, context));
+        //}
 
         [DebuggerHidden]
         protected void EmitChain<T>(IPipelineMessage<TContext> message, T data, TContext context = default(TContext)) where T : class
@@ -94,15 +94,15 @@ namespace Pipes.Abstraction
             }
         }
 
-        protected Observer<TData> ObserveFor<TData>() where TData : class
-        {
-            return new Observer<TData>(this, null, null);
-        }
+        //protected Observer<TData> ObserveFor<TData>() where TData : class
+        //{
+        //    return new Observer<TData>(this, null, null);
+        //}
 
-        protected Observer<TData> ObserveFor<TData>(object aux) where TData : class
-        {
-            return new Observer<TData>(this, null, aux);
-        }
+        //protected Observer<TData> ObserveFor<TData>(object aux) where TData : class
+        //{
+        //    return new Observer<TData>(this, null, aux);
+        //}
 
         protected Observer<TData> ObserveFor<TData>(IPipelineMessage<TContext> message) where TData : class
         {
@@ -140,6 +140,12 @@ namespace Pipes.Abstraction
 
             public Observer(PipelineComponent<TContext> component, IPipelineMessage<TContext> message, object aux)
             {
+                if (component == null)
+                    throw new ArgumentNullException("component");
+
+                if (message == null)
+                    throw new ArgumentNullException("message");
+
                 _aux = aux;
                 _message = message;
                 _component = component;
@@ -151,10 +157,7 @@ namespace Pipes.Abstraction
 
                 if (_emitComplete)
                 {
-                    if (_message != null)
-                        _component.EmitChain(_message, complete);
-                    else
-                        _component.Emit(complete);
+                    _component.EmitChain(_message, complete);
                 }
 
                 _disposables.Apply(item => item.Dispose());
@@ -162,7 +165,7 @@ namespace Pipes.Abstraction
 
             public void OnError(Exception exception)
             {
-                if (!_emitError || _message != null)
+                if (!_emitError)
                 {
                     if (!_message.HandleException(exception))
                     {
@@ -171,17 +174,14 @@ namespace Pipes.Abstraction
                     }
                 }
                 else
-                    _component.Emit(exception);
+                    _component.EmitChain(_message, exception);
 
                 _disposables.Apply(item => item.Dispose());
             }
 
             public void OnNext(TData value)
             {
-                if (_message != null)
-                    _component.EmitChain(_message, value);
-                else
-                    _component.Emit(value);
+                _component.EmitChain(_message, value);
             }
 
             public Observer<TData> WithDisposal(IDisposable disposable)

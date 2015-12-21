@@ -35,6 +35,9 @@ namespace Pipes.Abstraction
         
         private bool _terminated;
 
+        // Atomic write, dirty read
+        private int _totalMessagesInFlight;
+
         //public IEnumerable<IPipelineComponent<TContext>> Components { get { return _components; } } 
 
         protected Pipeline()
@@ -49,11 +52,21 @@ namespace Pipes.Abstraction
         /// <param name="thisPipeline"></param>
         protected abstract void Describe(IPipelineBuilder<TContext> thisPipeline);
 
-        protected abstract void MessageInFlight<T>(IPipelineMessage<T, TContext> message) where T : class;
+        public virtual void Initialize()
+        {
+            Build();
+        }
+
+
+        protected virtual void MessageInFlight<T>(IPipelineMessage<T, TContext> message) where T : class
+        {
+            Interlocked.Increment(ref _totalMessagesInFlight);
+        }
 
         protected virtual void MessageCompleted<T>(IPipelineMessage<T, TContext> message) where T : class
         {
             message.Context.MessageCompleted();
+            Interlocked.Decrement(ref _totalMessagesInFlight);
         }
 
         protected abstract void HandleUnknownMessage<T>(IPipelineMessage<T, TContext> message) where T : class;
@@ -275,9 +288,17 @@ namespace Pipes.Abstraction
 
                     if (!targets.Any())
                     {
-                        if (dataType.IsAssignableFrom(typeof(Exception)) && _exceptionHandler != null)
+                        if (typeof(Exception).IsAssignableFrom(dataType))
                         {
-                            _exceptionHandler(new PipelineException<TContext>(this, message.Data as Exception, message));
+                            var pipelineException = new PipelineException<TContext>(this, message, message.Data as Exception);
+                            if (_exceptionHandler != null)
+                            {
+                                _exceptionHandler(pipelineException);
+                            }
+                            else
+                            {
+                                HandleException(pipelineException);
+                            }
                         }
                         else
                         {
@@ -301,26 +322,31 @@ namespace Pipes.Abstraction
 
                     if (targets.Length > 1)
                     {
-                        await Task.WhenAll(targets.Select(each => each.Invoke(message)));
+                        await Task.WhenAll(targets.Select(each => InvokeRoute(message, each)));
                         return;
                     }
 
-                    await targets[0].Invoke(message);
+                    await InvokeRoute(message,targets[0]);
                 }
                 catch (PipelineException<TContext> pipelineException)
                 {
-                    if (_exceptionHandler == null)
-                        throw;
+                    var handled = _exceptionHandler?.Invoke(pipelineException);
+                    if (handled.HasValue && handled.Value)
+                    {
+                        return;
+                    }
 
-                    if (!_exceptionHandler(pipelineException))
-                        throw;
+                    handled = HandleException(pipelineException);
+
+                    if (!handled.Value)
+                        throw pipelineException.InnerException;
                 }
                 catch (Exception exception)
                 {
                     if (_exceptionHandler == null)
                         throw;
 
-                    if (!_exceptionHandler(new PipelineException<TContext>(this, exception, message)))
+                    if (!_exceptionHandler(new PipelineException<TContext>(this, message, exception)))
                         throw;
                 }
             }
@@ -329,6 +355,22 @@ namespace Pipes.Abstraction
                 MessageCompleted(message);
             }
 
+        }
+
+        private Task InvokeRoute<T>(IPipelineMessage<T, TContext> message, Conduit<TContext> target) where T : class
+        {
+            if (target.ContextBrancher != null)
+            {
+                var subcontext = target.ContextBrancher(message);
+                message = new PipelineMessage<T, TContext>(this, message.Sender,message.Data,subcontext);
+
+                if (target.NeedsCompletion)
+                {
+                    target.Invoke()
+                }
+            }
+
+            return target.Invoke(message);
         }
 
         // ReSharper disable once MemberCanBePrivate.Global
@@ -355,10 +397,20 @@ namespace Pipes.Abstraction
             _exceptionHandler = null;
         }
 
-        public void Shutdown()
+        public async Task WaitForIdle(int waitTimeSliceMs = 50)
+        {
+            while (_totalMessagesInFlight > 0)
+            {
+                await Task.Delay(waitTimeSliceMs);
+            }
+        }
+        /// <summary>
+        /// Shuts down a pipeline
+        /// </summary>
+        public void ShutdownConduitThreads()
         {
             // This method (and the entire code graph under it) must be idempotent
-            _conduits.SelectMany(kv => kv.Value).SelectMany(kv => kv.Value).Where(conduit => conduit.OffThread).Apply(conduit => conduit.Shutdown());
+            _conduits.SelectMany(kv => kv.Value).SelectMany(kv => kv.Value).Apply(conduit => conduit.ShutdownThreads());
         }
 
         public IPipelineMessageTap<T,TContext> CreateMessageTap<T>() where T : class
@@ -368,6 +420,11 @@ namespace Pipes.Abstraction
             return tap;
         }
 
+        /// <summary>
+        /// Replace the default exception handler.  Delegate should return true to denote the exception is handled,
+        /// otherwise the exception will be handled as usual.
+        /// </summary>
+        /// <param name="exceptionHandler"></param>
         public void SuppressExceptions(Func<PipelineException<TContext>,bool> exceptionHandler)
         {
             _exceptionHandler = exceptionHandler;
@@ -399,7 +456,8 @@ namespace Pipes.Abstraction
 
         public virtual void Dispose()
         {
-            Shutdown();
+            WaitForIdle().Wait();
+            ShutdownConduitThreads();
         }
 
         public void Terminate()

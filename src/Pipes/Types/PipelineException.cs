@@ -10,18 +10,10 @@ namespace Pipes.Types
         
         private readonly Pipeline<TContext> _pipeline;
 
-        public PipelineException(Pipeline<TContext> pipeline, Exception exception, IPipelineMessage<TContext> pipelineMessage) : base("Pipeline Exception", exception)
+        public PipelineException(Pipeline<TContext> pipeline, IPipelineMessage<TContext> pipelineMessage, Exception exception) : base("Pipeline Exception", exception)
         {
             _pipeline = pipeline;
             PipelineMessage = pipelineMessage;
-        }
-
-        // TODO: Consider deleting this
-        public void Emit<T>(T data, TContext context = default(TContext)) where T : class
-        {
-            var source = PipelineMessage.Sender;
-            var message = new PipelineMessage<T,TContext>(_pipeline, source, data, context, PipelineMessage);
-            _pipeline.EmitMessage(message);
         }
     }
 }

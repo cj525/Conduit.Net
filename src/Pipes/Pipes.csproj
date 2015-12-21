@@ -42,7 +42,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Abstraction\BuildingBlock.cs" />
+    <Compile Include="Abstraction\CompletionSource.cs" />
     <Compile Include="Abstraction\Target.cs" />
+    <Compile Include="BuildingBlocks\Completor.cs" />
     <Compile Include="Exceptions\Abstraction\TypeBasedMessageException.cs" />
     <Compile Include="BuildingBlocks\Constructor.cs" />
     <Compile Include="BuildingBlocks\ConstructorManifold.cs" />
@@ -55,10 +57,10 @@
     <Compile Include="Extensions\EnumerableExtensions.cs" />
     <Compile Include="Extensions\GenericExtensions.cs" />
     <Compile Include="Implementation\Conduit.cs" />
+    <Compile Include="Interfaces\CompletionInterfaces.cs" />
     <Compile Include="Interfaces\ContextInterfaces.cs" />
     <Compile Include="Types\CompletionBuffer.cs" />
     <Compile Include="Types\CompletionManifold.cs" />
-    <Compile Include="Types\FaultBuffer.cs" />
     <Compile Include="Types\OperationContext.cs" />
     <Compile Include="Types\QueueThread.cs" />
     <Compile Include="Implementation\MessageTarget.cs" />

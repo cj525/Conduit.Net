@@ -5,13 +5,16 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
+using Pipes.Abstraction;
 using Pipes.Interfaces;
 
 namespace Pipes.Types
 {
     /// <summary>
-    /// Provides a thread-safe collection which uses a token (<see cref="ICompletable"/>) to remove items from the collection.
+    /// Provides a thread-safe collection which uses a token (<see cref="CompletionSource"/>) to remove items from the collection. 
     /// If a maximum number of items is specified during construction, the collection will block on the Add call until an item is removed.
+    /// This class is built-in to the <see cref="OperationContext"/>.  You should not create this class directly unless you understand the 
+    /// potential side-effects of having multiple CompletionBuffers in the Adjunct collection.
     /// </summary>
     /// <remarks>
     /// Enumeration of this collection is NOT thread-safe.  The consumer code should prevent Add/Remove during enumeration.
@@ -20,7 +23,7 @@ namespace Pipes.Types
     /// <typeparam name="T"></typeparam>
     [DebuggerTypeProxy(typeof(CompletionBuffer<>.DebugProxy))]
     [DebuggerDisplay("{ToDebugString()}")]
-    public class CompletionBuffer<T> : IEnumerable<T>, IDisposable, ICancellable
+    public class CompletionBuffer<T> : CompletionSource, IEnumerable<T>, IDisposable
     {
         private readonly object _lockObject = new {};
         private readonly SemaphoreSlim _semaphore;
@@ -33,7 +36,12 @@ namespace Pipes.Types
         private ulong _version;
         private bool _isDisposed;
 
-        public CompletionBuffer(int maxItems = 0)
+        public CompletionBuffer(CompletionAction completionAction = null, CancelAction cancelAction = null, FaultAction faultAction = null) : base(completionAction, cancelAction, faultAction)
+        {
+            
+        }
+
+        public CompletionBuffer(int maxItems = 0, CompletionAction completionAction = null, CancelAction cancelAction = null, FaultAction faultAction = null) : base(completionAction,cancelAction,faultAction)
         {
             _maxItems = maxItems;
             if (maxItems > 0)
@@ -59,7 +67,17 @@ namespace Pipes.Types
             get { lock (_lockObject) return  _count == _maxItems && _maxItems > 0; }
         }
 
-        public ICompletable<T> Add(T data, Action<T> onComplete = null, Action<T> onCancel = null)
+        public ICompletionSource<T> AddWithSingleAction(T data, Action onAnything)
+        {
+            return Add(data, () => onAnything(), reason => onAnything(), (reason, exception) => onAnything());
+        }
+
+        public ICompletionSource<T> Add(T data, CompletionAction onSuccess, FaultAction onFailure)
+        {
+            return Add(data, onSuccess, (reason) => onFailure(reason), onFailure);
+        }
+
+        public ICompletionSource<T> Add(T data, CompletionAction completionAction = null, CancelAction cancelAction = null, FaultAction faultAction = null)
         {
             if (_maxItems > 0 )
             {
@@ -71,7 +89,7 @@ namespace Pipes.Types
 
             lock (_lockObject)
             {
-                _tail = new Slot(this, data, _tail, onComplete, onCancel);
+                _tail = new Slot(this, data, _tail, completionAction, cancelAction, faultAction);
 
                 if (_head == null)
                 {
@@ -139,6 +157,10 @@ namespace Pipes.Types
             if (_version == ulong.MaxValue)
                 _version = 0;
         }
+        public void Cancel()
+        {
+            _semaphoreCancelSource.Cancel();
+        }
 
         public IEnumerator<T> GetEnumerator()
         {
@@ -146,7 +168,7 @@ namespace Pipes.Types
             var node = _head;
             while (startVersion == _version && node != null)
             {
-                yield return node;
+                yield return node.Data;
                 node = node.Next;
             }
 
@@ -159,11 +181,6 @@ namespace Pipes.Types
             return GetEnumerator();
         }
 
-        public void Cancel()
-        {
-            _semaphoreCancelSource.Cancel();
-        }
-
         public void Dispose()
         {
             _isDisposed = true;
@@ -171,22 +188,16 @@ namespace Pipes.Types
         }
 
         [SuppressMessage("ReSharper", "MemberCanBePrivate.Global", Justification = "Paired methods, Next/Previous, would look silly with different access modifier naming.")]
-        protected class Slot : ICompletable<T>, ICancellable
+        protected class Slot : CompletionSource, ICompletionSource<T>, IBranchableCompletionSource
         {
             private readonly CompletionBuffer<T> _container;
-            private readonly Action<T> _completionAction;
-            private readonly Action<T> _cancelAction;
             internal Slot Previous;
             internal Slot Next;
 
             public T Data { get; private set; }
 
-            public bool IsCompleted { get; private set; }
-
-            internal Slot(CompletionBuffer<T> container, T data, Slot previous, Action<T> completionAction, Action<T> cancelAction)
+            internal Slot(CompletionBuffer<T> container, T data, Slot previous, CompletionAction completionAction = null, CancelAction cancelAction = null, FaultAction faultAction = null) : base( completionAction, cancelAction, faultAction)
             {
-                _completionAction = completionAction;
-                _cancelAction = cancelAction;
                 _container = container;
                 Data = data;
                 Previous = previous;
@@ -196,25 +207,51 @@ namespace Pipes.Types
             }
 
 
-            public void Completed()
+            public override void Completed()
             {
-                Remove(_completionAction);
+                Remove(base.Completed);
             }
 
-            public void Cancel()
+            public override void Cancel(string reason)
             {
-                Remove( _cancelAction );
+                Remove(() => base.Cancel(reason));
+            }
+
+            public override void Fault(Exception exception)
+            {
+                Remove(() => base.Fault(exception));
+            }
+
+            public override void Fault(string reason, Exception exception = null)
+            {
+                Remove(() => base.Fault(reason,exception));
             }
 
 
-            public CompletionManifold Branch(Action completedAction = null)
+            /// <summary>
+            /// Branching will create a new manifold that completes a dependant in this manifold 
+            /// when the new manifold is completed, cancelled, or faulted.
+            /// </summary>
+            /// <param name="completionAction"></param>
+            /// <param name="cancelAction"></param>
+            /// <param name="faultAction"></param>
+            /// <returns></returns>
+            public CompletionManifold Branch(CompletionAction completionAction = null, CancelAction cancelAction = null, FaultAction faultAction = null)
             {
-                return new CompletionManifold(() =>
-                {
-                    Completed();
-                    completedAction?.Invoke();
-                });
+                // Completion chains
+                if (completionAction == null)
+                    completionAction = Completed;
+
+                if (cancelAction == null)
+                    cancelAction = Cancel;
+
+                if (faultAction == null)
+                    faultAction = Fault;
+                
+                // Return new, chained completion manifold
+                return new CompletionManifold(completionAction, cancelAction, faultAction);
             }
+
 
             private void OnCompleted()
             {
@@ -235,12 +272,12 @@ namespace Pipes.Types
                 Next = null;
             }
 
-            private void Remove(Action<T> action)
+            private void Remove(Action action)
             {
                 if( !IsCompleted )
                 {
                     // Fire notification
-                    action?.Invoke( this );
+                    action?.Invoke();
 
                     // Have container make adjustments 
                     // as well as do ours under it's supervision (aka lock)
@@ -251,12 +288,12 @@ namespace Pipes.Types
                 }
             }
 
-            // Allow icky casting if that's what they want. 
-            // For all intents and purposes, this IS the data
-            public static implicit operator T(Slot slot)
-            {
-                return slot.Data;
-            }
+            //// Allow icky casting if that's what they want. 
+            //// For all intents and purposes, this IS the data
+            //public static implicit operator T(Slot slot)
+            //{
+            //    return slot.Data;
+            //}
 
             // For all intents and purposes, this IS the data
             public override string ToString()

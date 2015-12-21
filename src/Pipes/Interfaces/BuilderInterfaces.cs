@@ -51,5 +51,15 @@ namespace Pipes.Interfaces
         IPipelineComponentEmissionBuilder<TContext> Emits<T>() where T : class;
     }
 
+    public interface ICompletionSourceBuilder<out TCompletionEntry, TContext> where TContext : class, IOperationContext where TCompletionEntry : class
+    {
+        ICompletionSourceBuilder<TCompletionEntry, TContext> WithMaxConcurrency(int max);
+
+        ICompletionSourceBuilder<TCompletionEntry,TContext> OnComplete(Func<IPipelineMessage<TCompletionEntry, TContext>, Task> asyncAction);
+
+        ICompletionSourceBuilder<TCompletionEntry, TContext> OnCancel(Func<IPipelineMessage<TCompletionEntry, TContext>, Task> asyncAction);
+
+        ICompletionSourceBuilder<TCompletionEntry, TContext> OnFault(Func<IPipelineMessage<TCompletionEntry, TContext>, Task> asyncAction);
+    }
 
 }

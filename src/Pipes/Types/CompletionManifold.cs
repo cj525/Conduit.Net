@@ -1,29 +1,34 @@
 ﻿using System;
+using Pipes.Abstraction;
 using Pipes.Interfaces;
 
 namespace Pipes.Types
 {
-    public class CompletionManifold : ICompletable
+    public class CompletionManifold : CompletionSource, IBranchableCompletionSource
     {
         private readonly object _lockObject = new { };
+
         private int _dependencyCount;
-        private readonly Action _action;
+        
+
+        public CompletionManifold(CompletionAction completionAction = null, CancelAction cancelAction = null, FaultAction faultAction = null) : base(completionAction, cancelAction, faultAction)
+        {
+        }
+
 
         public int DependencyCount { get { return _dependencyCount; } }
 
+        public override bool IsCompleted { get { lock (_lockObject) return _dependencyCount == 0; } }
 
-        public CompletionManifold(Action action)
-        {
-            _action = action;
-        }
 
         public void RemoveDependent()
         {
             lock (_lockObject)
             {
-                if (--_dependencyCount == 0)
+                if (--_dependencyCount == 0 && (IsCancelled || IsFaulted))
                 {
-                    _action();
+                    // Hookup base implementation because it was intercepted
+                    base.Completed();
                 }
 
                 if (_dependencyCount < 0)
@@ -41,31 +46,41 @@ namespace Pipes.Types
             }
         }
 
+        public override void Completed()
+        {
+            // Itercept completion
+            RemoveDependent();
+            // No call to base
+        }
+
         public override string ToString()
         {
             return _dependencyCount + " dependents";
         }
 
-        public void Completed()
+        /// <summary>
+        /// Branching will create a new manifold that completes a dependant in this manifold 
+        /// when the new manifold is completed, cancelled, or faulted.
+        /// </summary>
+        /// <param name="completionAction"></param>
+        /// <param name="cancelAction"></param>
+        /// <param name="faultAction"></param>
+        /// <returns></returns>
+        public CompletionManifold Branch(CompletionAction completionAction = null, CancelAction cancelAction = null, FaultAction faultAction = null)
         {
-            RemoveDependent();
-        }
+            // Completion chains
+            if (completionAction == null)
+                completionAction = Completed;
 
-        public bool IsCompleted
-        {
-            get
-            {
-                lock (_lockObject) return _dependencyCount == 0;
-            }
-        }
+            if (cancelAction == null)
+                cancelAction = Cancel;
 
-        public CompletionManifold Branch(Action completionAction = null)
-        {
-            return new CompletionManifold(() =>
-            {
-                RemoveDependent();
-                completionAction?.Invoke();
-            });
+            if (faultAction == null)
+                faultAction = Fault;
+
+
+            // Return new completion manifold that wraps to this
+            return new CompletionManifold(completionAction, cancelAction, faultAction);
         }
     }
 }

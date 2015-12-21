@@ -19,7 +19,7 @@ namespace Pipes.Tests.Types
             var c3 = default(ICompletable);
             var buffer = CommonSetup(out c1, out c2, out c3);
 
-            CommonScenario(buffer, () => c1.Completed(),4);
+            CommonScenario(buffer, () => c1.Complete(),4);
 
             var aBuffer = buffer.ToArray();
 
@@ -40,7 +40,7 @@ namespace Pipes.Tests.Types
             var c3 = default(ICompletable);
             var buffer = CommonSetup(out c1, out c2, out c3);
 
-            CommonScenario(buffer, () => c2.Completed(), 4);
+            CommonScenario(buffer, () => c2.Complete(), 4);
 
             var aBuffer = buffer.ToArray();
             Assert.AreEqual(aBuffer[0], "Item 1");
@@ -56,7 +56,7 @@ namespace Pipes.Tests.Types
             var c3 = default(ICompletable);
             var buffer = CommonSetup(out c1, out c2, out c3);
 
-            CommonScenario(buffer, () => c3.Completed(), 4);
+            CommonScenario(buffer, () => c3.Complete(), 4);
 
             var aBuffer = buffer.ToArray();
             Assert.AreEqual(aBuffer[0], "Item 1");
@@ -73,9 +73,9 @@ namespace Pipes.Tests.Types
             var c3 = default(ICompletable);
             var buffer = CommonSetup(out c1, out c2, out c3);
 
-            var c4 = CommonScenario(buffer, () => c1.Completed(), 4);
-            c3.Completed();
-            CommonScenario(buffer, () => c4.Completed(), 5);
+            var c4 = CommonScenario(buffer, () => c1.Complete(), 4);
+            c3.Complete();
+            CommonScenario(buffer, () => c4.Complete(), 5);
 
             var aBuffer = buffer.ToArray();
             Assert.AreEqual(aBuffer[0], "Item 2");

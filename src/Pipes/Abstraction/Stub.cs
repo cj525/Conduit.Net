@@ -29,13 +29,13 @@ namespace Pipes.Abstraction
                 pipeline.AddTubes(_tubes);
         }
 
-        public IPipelineConnectorAsync SendsMessagesTo(Stub<TContext> target)
+        public IPipelineConnectorAsyncWithCompletion SendsMessagesTo(Stub<TContext> target)
         {
             return AddGenericConduit(target);
         }
 
 
-        public IPipelineMessageSingleTarget<TContext> SendsMessage<T>() where T : class
+        public IPipelineMessageSingleTargetWithSubcontext<T,TContext> SendsMessage<T>() where T : class
         {
             return AddTypedConduit<T>();
         }
@@ -59,14 +59,14 @@ namespace Pipes.Abstraction
             return conduit;
         }
 
-        private IPipelineConnectorAsync AddGenericConduit(Stub<TContext> target, bool isPrivate = false)
+        private IPipelineConnectorAsyncWithCompletion AddGenericConduit(Stub<TContext> target, bool isPrivate = false)
         {
             var conduit = new Conduit<TContext>(this, target) { IsPrivate = isPrivate };
             _tubes.Add(conduit);
             return conduit;
         }
 
-        private IPipelineMessageSingleTarget<TContext> AddTypedConduit<T>(bool isPrivate = false) where T : class
+        private IPipelineMessageSingleTargetWithSubcontext<T,TContext> AddTypedConduit<T>(bool isPrivate = false) where T : class
         {
             // Create partial conduit
             var conduit = new Conduit<TContext>.Partial<T>(this) { IsPrivate = isPrivate };
@@ -74,6 +74,7 @@ namespace Pipes.Abstraction
 
             return conduit;
         }
+
 
         private class PrivateTube : IPipelineMessageChain<TContext>
         {
@@ -89,7 +90,7 @@ namespace Pipes.Abstraction
                 return _stub.AddGenericConduit(target, true);
             }
 
-            public IPipelineMessageSingleTarget<TContext> WhichSendsMessage<T>() where T : class
+            public IPipelineMessageSingleTargetWithSubcontext<T,TContext> WhichSendsMessage<T>() where T : class
             {
                 return _stub.AddTypedConduit<T>(true);
             }

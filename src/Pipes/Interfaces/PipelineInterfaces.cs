@@ -26,9 +26,9 @@ namespace Pipes.Interfaces
         
         IPipelineMessage<TContext> Top { get; }
 
-        void Emit<TData>(TData data, TContext context = default(TContext)) where TData : class;
+        //void Emit<TData>(TData data, TContext context = default(TContext)) where TData : class;
 
-        Task EmitAsync<TData>(TData data, TContext context = default(TContext)) where TData : class;
+        //Task EmitAsync<TData>(TData data, TContext context = default(TContext)) where TData : class;
 
         void EmitChain<TData>(IPipelineComponent<TContext> origin, TData data, TContext context = default(TContext)) where TData : class;
 
@@ -59,7 +59,12 @@ namespace Pipes.Interfaces
 
     public interface IPipelineMessageSingleTarget<TContext> where TContext : class, IOperationContext
     {
-        IPipelineConnectorAsync To(Stub<TContext> target);
+        IPipelineConnectorAsyncWithCompletion To(Stub<TContext> target);
+    }
+
+    public interface IPipelineMessageSingleTargetWithSubcontext<out TData, TContext> : IPipelineMessageSingleTarget<TContext> where TContext : class, IOperationContext where TData : class
+    {
+        IPipelineMessageSingleTarget<TContext> WithSubcontext(Func<IPipelineMessage<TData,TContext>, TContext> branchFn);
     }
 
     public interface IPipelineMessageTap<out TData, TContext>
@@ -79,9 +84,9 @@ namespace Pipes.Interfaces
 
     public interface IPipelineConnectorBase<TContext> where TContext : class, IOperationContext
     {
-        IPipelineConnectorAsync SendsMessagesTo(Stub<TContext> target);
+        IPipelineConnectorAsyncWithCompletion SendsMessagesTo(Stub<TContext> target);
 
-        IPipelineMessageSingleTarget<TContext> SendsMessage<TData>() where TData : class;
+        IPipelineMessageSingleTargetWithSubcontext<TData, TContext> SendsMessage<TData>() where TData : class;
     }
 
     public interface IPipelineConnector<TContext> : IPipelineConnectorBase<TContext> where TContext : class, IOperationContext
@@ -105,10 +110,20 @@ namespace Pipes.Interfaces
         void WithQueueLengthOf(int queueLength);
     }
 
+    public interface IPipelineConnectorWithCompletion
+    {
+        IPipelineConnectorAsync WithCompletion(int maxConcurrency = 0);
+    }
+
+    public interface IPipelineConnectorAsyncWithCompletion : IPipelineConnectorWithCompletion, IPipelineConnectorAsync
+    {
+        
+    }
+
     public interface IPipelineMessageChain<TContext> where TContext : class, IOperationContext
     {
         IPipelineConnectorAsync WhichSendsMessagesTo(Stub<TContext> target);
 
-        IPipelineMessageSingleTarget<TContext> WhichSendsMessage<T>() where T : class;
+        IPipelineMessageSingleTargetWithSubcontext<TData, TContext> WhichSendsMessage<TData>() where TData : class;
     }
 }

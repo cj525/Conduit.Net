@@ -52,26 +52,26 @@ namespace Pipes.Types
             }
         }
 
-        [DebuggerHidden]
-        public void Emit<TData>(TData data, TContext context = default(TContext)) where TData : class
-        {
-            if (context == null || context.Equals(default(TContext)))
-            {
-                context = Context;
-            }
-            _pipeline.EmitMessage(new PipelineMessage<TData, TContext>(_pipeline, Sender, data, context, this));
-        }
+        //[DebuggerHidden]
+        //public void Emit<TData>(TData data, TContext context = default(TContext)) where TData : class
+        //{
+        //    if (context == null || context.Equals(default(TContext)))
+        //    {
+        //        context = Context;
+        //    }
+        //    _pipeline.EmitMessage(new PipelineMessage<TData, TContext>(_pipeline, Sender, data, context, this));
+        //}
 
-        [DebuggerHidden]
-        public Task EmitAsync<TData>(TData data, TContext context = default(TContext)) where TData : class
-        {
-            if (context == null || context.Equals(default(TContext)))
-            {
-                context = Context;
-            }
+        //[DebuggerHidden]
+        //public Task EmitAsync<TData>(TData data, TContext context = default(TContext)) where TData : class
+        //{
+        //    if (context == null || context.Equals(default(TContext)))
+        //    {
+        //        context = Context;
+        //    }
             
-            return _pipeline.EmitMessageAsync(new PipelineMessage<TData, TContext>(_pipeline, Sender, data, context, this));
-        }
+        //    return _pipeline.EmitMessageAsync(new PipelineMessage<TData, TContext>(_pipeline, Sender, data, context, this));
+        //}
 
         [DebuggerHidden]
         public void EmitChain<TData>(IPipelineComponent<TContext> origin, TData data, TContext context = default(TContext)) where TData : class
@@ -96,7 +96,7 @@ namespace Pipes.Types
 
         public bool HandleException(Exception exception)
         {
-            var pipelineException = new PipelineException<TContext>(_pipeline, exception, this);
+            var pipelineException = new PipelineException<TContext>(_pipeline, this, exception);
 
             return _pipeline.HandleException(pipelineException); ;
         }

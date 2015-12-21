@@ -25,11 +25,11 @@ namespace Pipes.Extensions
             return array;
         }
 
-        //[DebuggerStepThrough]
-        //public static void ApplyAndWait<T>(this IEnumerable<T> source, Func<T, Task> action)
-        //{
-        //    Task.WaitAll(source.Select(action).ToArray());
-        //}
+        [DebuggerStepThrough]
+        public static void ApplyAndWait<T>(this IEnumerable<T> source, Func<T, Task> action)
+        {
+            Task.WaitAll(source.Select(action).ToArray());
+        }
 
 
 

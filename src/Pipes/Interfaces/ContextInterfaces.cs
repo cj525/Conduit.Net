@@ -1,41 +1,38 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Pipes.Types;
 
 namespace Pipes.Interfaces
 {
-    public interface IOperationContext : IDisposable
-    {
 
+    // TODO: Rename to IPipelineContext
+    public interface IOperationContext : IDisposable, ICompletionSource
+    {
         void AcquireContextHold();
 
         OperationContext.DisposableContextHold AcquireDisposableContextHold();
+
         void ReleaseContextHold();
 
         CompletionManifold BranchCompletion();
 
-        void Cancel();
-
-        bool IsCancelled { get; }
-
-        bool IsCompleted { get; }
-
-        void Completed();
-
         void Close();
-
-        bool Contains<T>();
 
         void MessageCompleted();
 
         void MessageInFlight();
 
-        void RegisterOnCancellationAction(Action action);
+        void RegisterOnCancellation(CancellationTask action);
 
-        void RegisterOnCompleteAction(Action action);
+        void RegisterOnCompletion(CompletionTask action);
+
+        void RegisterOnFault(FaultTask action);
+
+
+        bool ContainsAdjunctAssignableTo<T>();
+
+        bool ContainsAdjunctOfType<T>();
 
 
         void ApplyOptionalAdjunct<T>(Action<T> operation);
@@ -47,32 +44,14 @@ namespace Pipes.Interfaces
 
         T Retrieve<T>();
 
-        T[] RetrieveDerived<T>();
+        IEnumerable<T> RetrieveDerived<T>();
 
         void Store<T>() where T : class, new();
 
         T Store<T>(T adjunct);
 
-        Task WaitForIdle();
-    }
-
-    public interface ICancellable
-    {
-        void Cancel();
-    }
-
-    public interface ICompletable
-    {
-        void Completed();
-
-        bool IsCompleted { get; }
-
-        CompletionManifold Branch(Action completionAction = null);
+        Task WaitForIdle(int waitTimeSliceMs);
     }
 
 
-    public interface ICompletable<out T> : ICompletable
-    {
-        T Data { get; }
-    }
 }
