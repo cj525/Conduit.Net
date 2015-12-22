@@ -218,6 +218,19 @@ namespace Pipes.Types
             return Adjuncts.Any(kv => type.IsAssignableFrom(kv.Key));
         }
 
+        public T Ensure<T>(Func<T> factory)
+        {
+            var type = typeof(T);
+            if (Adjuncts.ContainsKey(type))
+                return (T) Adjuncts[type];
+            else
+            {
+                var result = factory();
+                Adjuncts.Add(type, result);
+                return result;
+            }
+        }
+
         public T Store<T>(T adjunct)
         {
             var type = typeof(T);
@@ -229,9 +242,9 @@ namespace Pipes.Types
             return adjunct;
         }
 
-        public void Store<T>() where T : class, new()
+        public T Store<T>() where T : class, new()
         {
-            Store(new T());
+            return Store(new T());
         }
 
         public T Remove<T>()

@@ -10,7 +10,7 @@ using Pipes.Types;
 
 namespace Pipes.Abstraction
 {
-    //public abstract class PipelineComponent : PipelineComponent<object> { }
+    public abstract class PipelineComponent : PipelineComponent<IOperationContext> { }
 
     public abstract class PipelineComponent<TContext> : IPipelineComponent<TContext> where TContext : class, IOperationContext
     {
@@ -55,21 +55,15 @@ namespace Pipes.Abstraction
         //}
 
         [DebuggerHidden]
-        protected void EmitChain<T>(IPipelineMessage<TContext> message, T data, TContext context = default(TContext)) where T : class
+        protected void Emit<T>(IPipelineMessage<TContext> message, T data, TContext subcontext = default(TContext)) where T : class
         {
-            if (context == default(TContext))
-                context = message.Context;
-
-            message.EmitChain(this, data, context);
+            message.Chain(this, data, subcontext);
         }
 
         [DebuggerHidden]
-        protected Task EmitChainAsync<T>(IPipelineMessage<TContext> message, T data, TContext context = default(TContext)) where T : class
+        protected Task EmitAsync<T>(IPipelineMessage<TContext> message, T data, TContext subcontext = default(TContext)) where T : class
         {
-            if (context == default(TContext))
-                context = message.Context;
-
-            return message.EmitChainAsync(this, data, context);
+            return message.ChainAsync(this, data, subcontext);
         }
 
         protected void Terminate()
@@ -77,7 +71,70 @@ namespace Pipes.Abstraction
             _pipeline.Terminate();
         }
 
+        protected async Task Loop<T>( TContext context, LoopState<T> loopState ) where T : class
+        {
+            while (!context.IsCancelled)
+            {
+                if (!await loopState.AdvanceAsync())
+                    break;
+
+                await loopState.Yield();
+            }
+        }
         
+        protected abstract class LoopState<T> where T : class 
+        {
+            // Implements IAsyncEnumerator but it's not officially BCL yet
+            // and I am controlling visibility anyway, and since you can't
+            // internally implement and interface, we'll forge ahead without
+
+            private readonly IPipelineMessage<TContext> _message;
+            private readonly IPipelineComponent<TContext> _component;
+
+            protected LoopState(IPipelineComponent<TContext> component, IPipelineMessage<TContext> message)
+            {
+                _component = component;
+                _message = message;
+            }
+
+            protected internal abstract Task<bool> AdvanceAsync();
+
+            protected abstract T Current { get; }
+
+            internal virtual async Task Yield()
+            {
+                try
+                {
+                    await _message.ChainAsync(_component, Current);
+                }
+                catch (Exception exception)
+                {
+                    // Give pipeline a chance to handle this
+                    if (!_message.HandleException(exception))
+                    {
+                        // Cancel the context (which will cancel the loop)
+                        _message.Context.Fault(exception);
+                    }
+                }
+            }
+        }
+        protected abstract class ConcurrentLoopState<T> : LoopState<T> where T:class
+        {
+            protected ConcurrentLoopState(IPipelineComponent<TContext> component, IPipelineMessage<TContext> message) : base(component, message)
+            {
+            }
+
+            /// <summary>
+            /// Because the base class already catches exceptions and faults the current context, this bit of craziness
+            /// works to trigger as many concurrent yield actions as possible, but only as fast as the loop state can keep
+            /// up, which makes it ideal for parsers where the current line's parsing may or may not depend on the previous line.
+            /// </summary>
+            internal new async void Yield()
+            {
+                await base.Yield();
+            }
+        }
+
         protected class EmissionRegistrar
         {
             private readonly IPipelineComponentBuilder<TContext> _builder;
@@ -157,7 +214,7 @@ namespace Pipes.Abstraction
 
                 if (_emitComplete)
                 {
-                    _component.EmitChain(_message, complete);
+                    _component.Emit(_message, complete);
                 }
 
                 _disposables.Apply(item => item.Dispose());
@@ -174,14 +231,14 @@ namespace Pipes.Abstraction
                     }
                 }
                 else
-                    _component.EmitChain(_message, exception);
+                    _component.Emit(_message, exception);
 
                 _disposables.Apply(item => item.Dispose());
             }
 
             public void OnNext(TData value)
             {
-                _component.EmitChain(_message, value);
+                _component.Emit(_message, value);
             }
 
             public Observer<TData> WithDisposal(IDisposable disposable)

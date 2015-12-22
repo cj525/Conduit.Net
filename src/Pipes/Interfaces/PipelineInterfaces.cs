@@ -30,10 +30,10 @@ namespace Pipes.Interfaces
 
         //Task EmitAsync<TData>(TData data, TContext context = default(TContext)) where TData : class;
 
-        void EmitChain<TData>(IPipelineComponent<TContext> origin, TData data, TContext context = default(TContext)) where TData : class;
+        void Chain<TData>(IPipelineComponent<TContext> origin, TData data, TContext subcontext = default(TContext)) where TData : class;
 
-        Task EmitChainAsync<TData>(IPipelineComponent<TContext> origin, TData data, TContext context = default(TContext)) where TData : class;
-        
+        Task ChainAsync<TData>(IPipelineComponent<TContext> origin, TData data, TContext subcontext = default(TContext)) where TData : class;
+
         bool HandleException(Exception exception);
     }
 

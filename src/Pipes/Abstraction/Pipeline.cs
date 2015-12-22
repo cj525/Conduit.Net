@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -13,6 +14,11 @@ using Pipes.Types;
 
 namespace Pipes.Abstraction
 {
+    public abstract class Pipeline : Pipeline<IOperationContext>
+    {
+            
+    }
+
     public abstract class Pipeline<TContext> : IDisposable where TContext : class, IOperationContext
     {
         private readonly Type _thisType;
@@ -69,7 +75,10 @@ namespace Pipes.Abstraction
             Interlocked.Decrement(ref _totalMessagesInFlight);
         }
 
-        protected abstract void HandleUnknownMessage<T>(IPipelineMessage<T, TContext> message) where T : class;
+        protected virtual void HandleUnknownMessage<T>(IPipelineMessage<T, TContext> message) where T : class
+        {
+            throw new UnhandledMessageInPipeline(typeof (T), message);
+        }
 
         protected internal virtual bool HandleException(PipelineException<TContext> pipelineException)
         {
@@ -359,14 +368,15 @@ namespace Pipes.Abstraction
 
         private Task InvokeRoute<T>(IPipelineMessage<T, TContext> message, Conduit<TContext> target) where T : class
         {
+            var context = message.Context;
             if (target.ContextBrancher != null)
             {
                 var subcontext = target.ContextBrancher(message);
-                message = new PipelineMessage<T, TContext>(this, message.Sender,message.Data,subcontext);
-
+                message = new PipelineMessage<T, TContext>(this, message.Sender, message.Data, subcontext);
                 if (target.NeedsCompletion)
                 {
-                    target.Invoke()
+                    //if( context.RegisterOnCompletion())
+                    //target.Invoke()
                 }
             }
 
@@ -537,5 +547,18 @@ namespace Pipes.Abstraction
         #endregion
 
 
+    }
+
+    public class UnhandledMessageInPipeline : Exception
+    {
+        public IPipelineMessage<IOperationContext> Message { get; private set; }
+
+        public Type DataType { get; private set; }
+
+        public UnhandledMessageInPipeline(Type type, IPipelineMessage<IOperationContext> message)
+        {
+            Message = message;
+            DataType = type;
+        }
     }
 }

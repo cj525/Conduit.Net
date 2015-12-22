@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Pipes.Interfaces;
 using Pipes.Types;
 
@@ -10,10 +11,10 @@ namespace Pipes.Abstraction
     public abstract class CompletionSource : ICompletionSource
     {
         private CompletionAction _completionAction;
-        private CancelAction _cancelAction;
+        private CancellationAction _cancelAction;
         private FaultAction _faultAction;
 
-        internal void AssignActions(CompletionAction completionAction = null, CancelAction cancelAction = null, FaultAction faultAction = null)
+        internal void AssignActions(CompletionAction completionAction = null, CancellationAction cancelAction = null, FaultAction faultAction = null)
         {
             _completionAction = completionAction;
             _cancelAction = cancelAction;
@@ -28,28 +29,40 @@ namespace Pipes.Abstraction
 
 
 
-        public virtual void Completed()
+        public virtual async Task Completed()
         {
             IsCompleted = true;
-            _completionAction?.Invoke();
+            if (_completionAction != null)
+                await _completionAction();
+            else
+                await Target.EmptyTask;
         }
 
-        public virtual void Cancel(string reason)
+        public virtual async Task Cancel(string reason)
         {
             IsCancelled = true;
-            _cancelAction?.Invoke(reason);
+            if (_cancelAction != null)
+                await _cancelAction(reason);
+            else
+                await Target.EmptyTask;
         }
 
-        public virtual void Fault(Exception exception)
+        public virtual async Task Fault(Exception exception)
         {
             IsFaulted = true;
-            _faultAction?.Invoke("Exception encountered", exception);
+            if (_faultAction != null)
+                await _faultAction("An exception was thrown", exception);
+            else
+                await Target.EmptyTask;
         }
 
-        public virtual void Fault(string reason, Exception exception = null)
+        public virtual async Task Fault(string reason, Exception exception = null)
         {
             IsFaulted = true;
-            _faultAction?.Invoke("Exception encountered", exception);
+            if (_faultAction != null)
+                await _faultAction(reason, exception);
+            else
+                await Target.EmptyTask;
         }
     }
 }

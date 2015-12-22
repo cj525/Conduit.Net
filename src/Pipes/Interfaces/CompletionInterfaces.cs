@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 namespace Pipes.Interfaces
 {
 
-    public delegate Task CompletionTask();
+    public delegate void CompletionAction();
 
-    public delegate Task CancellationTask(string reason = null);
+    public delegate void CancellationAction(string reason = null);
 
-    public delegate Task FaultTask(string reason = null, Exception exception = null);
+    public delegate void FaultAction(string reason = null, Exception exception = null);
 
 
 
@@ -20,7 +20,7 @@ namespace Pipes.Interfaces
     /// </summary>
     public interface ICancellable
     {
-        Task Cancel(string reason);
+        void Cancel(string reason);
 
         bool IsCancelled { get; }
     }
@@ -30,9 +30,9 @@ namespace Pipes.Interfaces
     /// </summary>
     public interface IFaultable
     {
-        Task Fault(Exception exception);
+        void Fault(Exception exception);
 
-        Task Fault(string reason, Exception exception = null);
+        void Fault(string reason, Exception exception = null);
 
         bool IsFaulted { get; }
     }
@@ -42,7 +42,7 @@ namespace Pipes.Interfaces
     /// </summary>
     public interface ICompletable
     {
-        Task Complete();
+        void Complete();
 
         bool IsCompleted { get; }
     }
@@ -71,6 +71,6 @@ namespace Pipes.Interfaces
     /// </summary>
     public interface IBranchableCompletionSource : ICompletionSource
     {
-        IBranchableCompletionSource Branch(CompletionTask completionTask = null, CancellationTask cancellationTask = null, FaultTask faultTask = null);
+        IBranchableCompletionSource Branch(CompletionAction completionAction = null, CancellationAction cancellationAction = null, FaultAction faultAction = null);
     }
 }

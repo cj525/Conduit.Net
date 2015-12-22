@@ -8,7 +8,7 @@ using Pipes.Interfaces;
 
 namespace Pipes.Types
 {
-    public abstract class PipelineMessage<TContext> : IPipelineMessage<TContext> where TContext : class, IOperationContext
+    public abstract class PipelineMessage<TContext> : IPipelineMessage<TContext>, IPipelineMessageInternals<TContext> where TContext : class, IOperationContext
     {
         // ReSharper disable once MemberCanBeProtected.Global
         private readonly Pipeline<TContext> _pipeline;
@@ -74,24 +74,15 @@ namespace Pipes.Types
         //}
 
         [DebuggerHidden]
-        public void EmitChain<TData>(IPipelineComponent<TContext> origin, TData data, TContext context = default(TContext)) where TData : class
+        public void Chain<TData>(IPipelineComponent<TContext> origin, TData data, TContext subcontext = default(TContext)) where TData : class
         {
-            if (context == null || context.Equals(default(TContext)))
-            {
-                context = Context;
-            }
-            _pipeline.EmitMessage(new PipelineMessage<TData, TContext>(_pipeline, origin, data, context, this));
+            _pipeline.EmitMessage(new PipelineMessage<TData, TContext>(_pipeline, origin, data, subcontext ?? Context, this));
         }
 
         [DebuggerHidden]
-        public Task EmitChainAsync<TData>(IPipelineComponent<TContext> origin, TData data, TContext context = default(TContext)) where TData : class
+        public Task ChainAsync<TData>(IPipelineComponent<TContext> origin, TData data, TContext subcontext = default(TContext)) where TData : class
         {
-            if (context == null || context.Equals(default(TContext)))
-            {
-                context = Context;
-            }
-            
-            return _pipeline.EmitMessageAsync(new PipelineMessage<TData, TContext>(_pipeline, origin, data, context, this));
+            return _pipeline.EmitMessageAsync(new PipelineMessage<TData, TContext>(_pipeline, origin, data, subcontext ?? Context, this));
         }
 
         public bool HandleException(Exception exception)

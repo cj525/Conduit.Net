@@ -1,11 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.31101.0
+# Visual Studio 14
+VisualStudioVersion = 14.0.23107.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pipes", "Pipes\Pipes.csproj", "{FE32B283-B191-415F-9BE6-EF18A75E0280}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pipes.Tests", "Tests\Pipes.Tests.csproj", "{74365434-FC0B-4113-B0E9-3A06D42FE6AB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pipes.Example", "Example\Pipes.Example.csproj", "{2AD23E73-26CF-4F18-A1FC-C6ADA2393DE4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{74365434-FC0B-4113-B0E9-3A06D42FE6AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{74365434-FC0B-4113-B0E9-3A06D42FE6AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{74365434-FC0B-4113-B0E9-3A06D42FE6AB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2AD23E73-26CF-4F18-A1FC-C6ADA2393DE4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2AD23E73-26CF-4F18-A1FC-C6ADA2393DE4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2AD23E73-26CF-4F18-A1FC-C6ADA2393DE4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2AD23E73-26CF-4F18-A1FC-C6ADA2393DE4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -23,11 +23,11 @@ namespace Pipes.Interfaces
 
         void MessageInFlight();
 
-        void RegisterOnCancellation(CancellationTask action);
+        void RegisterOnCancellation(CancellationAction action);
 
-        void RegisterOnCompletion(CompletionTask action);
+        void RegisterOnCompletion(CompletionAction action);
 
-        void RegisterOnFault(FaultTask action);
+        void RegisterOnFault(FaultAction action);
 
 
         bool ContainsAdjunctAssignableTo<T>();
@@ -37,6 +37,7 @@ namespace Pipes.Interfaces
 
         void ApplyOptionalAdjunct<T>(Action<T> operation);
 
+        T Ensure<T>(Func<T> factory);
 
         T Remove<T>();
 
@@ -46,7 +47,7 @@ namespace Pipes.Interfaces
 
         IEnumerable<T> RetrieveDerived<T>();
 
-        void Store<T>() where T : class, new();
+        T Store<T>() where T : class, new();
 
         T Store<T>(T adjunct);
 
