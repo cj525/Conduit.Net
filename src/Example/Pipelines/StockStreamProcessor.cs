@@ -75,7 +75,7 @@ namespace Pipes.Example.Pipelines
             // TODO: Could reach into data stack?  Would need to make a new message.
             // source -> [HasCompletion] -> Other -> [Cancellation]
             //                  ^ This message             ^ Message that was cancelled
-
+            // Maybe devise test for this
             // For now, escalate the cancel to a fault
             message.Context.Fault( "Cancel escalated to fault!" );
         }

@@ -29,7 +29,7 @@ namespace Pipes.Abstraction
                 pipeline.AddTubes(_tubes);
         }
 
-        public IPipelineConnectorAsyncWithCompletion SendsMessagesTo(Stub<TContext> target)
+        public IPipelineConnectorWithCompletion SendsMessagesTo(Stub<TContext> target)
         {
             return AddGenericConduit(target);
         }
@@ -45,21 +45,21 @@ namespace Pipes.Abstraction
             return new PrivateTube(this);
         }
 
-        public IPipelineConnectorAsync BroadcastsAllMessages()
+        public IPipelineConnector BroadcastsAllMessages()
         {
             var conduit = new Conduit<TContext>(this, null);
             _tubes.Add(conduit);
             return conduit;
         }
 
-        public IPipelineConnectorAsync BroadcastsAllMessagesPrivately()
+        public IPipelineConnector BroadcastsAllMessagesPrivately()
         {
             var conduit = new Conduit<TContext>(this, null) { IsPrivate = true };
             _tubes.Add(conduit);
             return conduit;
         }
 
-        private IPipelineConnectorAsyncWithCompletion AddGenericConduit(Stub<TContext> target, bool isPrivate = false)
+        private IPipelineConnectorWithCompletion AddGenericConduit(Stub<TContext> target, bool isPrivate = false)
         {
             var conduit = new Conduit<TContext>(this, target) { IsPrivate = isPrivate };
             _tubes.Add(conduit);
@@ -85,7 +85,7 @@ namespace Pipes.Abstraction
                 _stub = stub;
             }
 
-            public IPipelineConnectorAsync WhichSendsMessagesTo(Stub<TContext> target)
+            public IPipelineConnector WhichSendsMessagesTo(Stub<TContext> target)
             {
                 return _stub.AddGenericConduit(target, true);
             }

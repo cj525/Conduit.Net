@@ -48,7 +48,6 @@
     <Compile Include="BuildingBlocks\Completor.cs" />
     <Compile Include="Exceptions\Abstraction\TypeBasedMessageException.cs" />
     <Compile Include="BuildingBlocks\Constructor.cs" />
-    <Compile Include="BuildingBlocks\ConstructorManifold.cs" />
     <Compile Include="BuildingBlocks\Invocation.cs" />
     <Compile Include="BuildingBlocks\Receiver.cs" />
     <Compile Include="BuildingBlocks\Transmitter.cs" />
@@ -61,7 +60,6 @@
     <Compile Include="Interfaces\CompletionInterfaces.cs" />
     <Compile Include="Interfaces\ContextInterfaces.cs" />
     <Compile Include="Types\CompletionBuffer.cs" />
-    <Compile Include="Types\CompletionManifold.cs" />
     <Compile Include="Types\OperationContext.cs" />
     <Compile Include="Types\QueueThread.cs" />
     <Compile Include="Implementation\MessageTarget.cs" />
@@ -76,7 +74,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Types\MessageTap.cs" />
     <Compile Include="Stubs\ConstructorStub.cs" />
-    <Compile Include="Stubs\ConstructorManifoldStub.cs" />
     <Compile Include="Stubs\InvocationStub.cs" />
     <Compile Include="Stubs\ReceiverStub.cs" />
     <Compile Include="Stubs\TransmitterStub.cs" />

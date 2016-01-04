@@ -157,21 +157,21 @@ namespace Pipes.Abstraction
 
                         var messageSlot = senderSlot[messageType];
 
-                        // If this is a manifold, create/use manifold entry
-                        if (tCtor is ConstructorManifoldStub<TContext>)
-                        {
-                            var manifolds = messageSlot.Where(slot => slot.Target == tCtor && slot.Source == sCtor).ToArray();
-                            if (!manifolds.Any())
-                            {
-                                var conduit = new Conduit<TContext>(sCtor, tCtor);
-                                messageSlot.Add(conduit);
-                                messageSlot = conduit.AsManifold();
-                            }
-                            else
-                            {
-                                messageSlot = manifolds.First().AsManifold();
-                            }
-                        }
+                        ////// If this is a manifold, create/use manifold entry
+                        ////if (tCtor is ConstructorManifoldStub<TContext>)
+                        ////{
+                        ////    var manifolds = messageSlot.Where(slot => slot.Target == tCtor && slot.Source == sCtor).ToArray();
+                        ////    if (!manifolds.Any())
+                        ////    {
+                        ////        var conduit = new Conduit<TContext>(sCtor, tCtor);
+                        ////        messageSlot.Add(conduit);
+                        ////        messageSlot = conduit.AsManifold();
+                        ////    }
+                        ////    else
+                        ////    {
+                        ////        messageSlot = manifolds.First().AsManifold();
+                        ////    }
+                        ////}
 
                         // Find declared conduits
                         var existingTubes = _tubes.Where(tube => tube.Source == sCtor && tube.Target == tCtor && (tube.MessageType == null || tube.MessageType == messageType)).ToArray();
@@ -324,7 +324,7 @@ namespace Pipes.Abstraction
                 {
                     if (targets.Length == 0)
                     {
-                        await Target.EmptyTask;
+                        //await Target.EmptyTask;
                         return;
                     }
 
@@ -493,10 +493,10 @@ namespace Pipes.Abstraction
             _ctors.Add(ctor);
         }
 
-        internal void AddCtorManifold<TComponent>(ConstructorManifoldStub<TComponent, TContext> ctors) where TComponent : IPipelineComponent<TContext>
-        {
-            _ctors.Add(ctors);
-        }
+        //internal void AddCtorManifold<TComponent>(ConstructorManifoldStub<TComponent, TContext> ctors) where TComponent : IPipelineComponent<TContext>
+        //{
+        //    _ctors.Add(ctors);
+        //}
 
         internal void AddInvocation(InvocationStub<TContext> invocation)
         {
@@ -546,19 +546,17 @@ namespace Pipes.Abstraction
 
         #endregion
 
-
-    }
-
-    public class UnhandledMessageInPipeline : Exception
-    {
-        public IPipelineMessage<IOperationContext> Message { get; private set; }
-
-        public Type DataType { get; private set; }
-
-        public UnhandledMessageInPipeline(Type type, IPipelineMessage<IOperationContext> message)
+        public class UnhandledMessageInPipeline : Exception
         {
-            Message = message;
-            DataType = type;
+            public IPipelineMessage<TContext> Message { get; private set; }
+
+            public Type DataType { get; private set; }
+
+            public UnhandledMessageInPipeline(Type type, IPipelineMessage<TContext> message)
+            {
+                Message = message;
+                DataType = type;
+            }
         }
     }
 }

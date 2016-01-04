@@ -51,6 +51,7 @@
     <Compile Include="Implementation\EntryPoint.cs" />
     <Compile Include="Implementation\PretendDb.cs" />
     <Compile Include="Implementation\StockTickGenerator.cs" />
+    <Compile Include="Implementation\StockStream.cs" />
     <Compile Include="PipelineAdjuncts\ReflectionCache.cs" />
     <Compile Include="PipelineComponents\StockStatisticUpdater.cs" />
     <Compile Include="PipelineContexts\StreamLineContext.cs" />

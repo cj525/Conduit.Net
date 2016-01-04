@@ -30,7 +30,7 @@ namespace Pipes.Example.PipelineComponents
 
             if (stockTick.Value == 0)
             {
-                context.Cancel();
+                context.Cancel("Change was zero");
             }
             else
             {
