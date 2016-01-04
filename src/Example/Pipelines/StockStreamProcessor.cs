@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Pipes.Abstraction;
 using Pipes.Example.PipelineComponents;
 using Pipes.Example.PipelineContexts;
+using Pipes.Example.Schema;
 using Pipes.Interfaces;
 using Pipes.Types;
 
@@ -37,11 +38,11 @@ namespace Pipes.Example.Pipelines
                 .Into(ref parser);
 
             thisPipeline
-                .Constructs(()=>new PocoEmitter())
+                .Constructs(()=>new PocoEmitter<StockTick>())
                 .Into(ref emitter);
 
             thisPipeline
-                .Constructs(()=>new PocoWriter())
+                .Constructs(()=>new PocoWriter<StockTick>())
                 .Into(ref writer);
 
             thisPipeline

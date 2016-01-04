@@ -12,7 +12,7 @@ using Pipes.Types;
 
 namespace Pipes.Implementation
 {
-    internal class Conduit<TContext> : IPipelineConnectorAsyncWithCompletion, IPipelineConnectorAsyncBuffered where TContext : class, IOperationContext
+    internal class Conduit<TContext> : IPipelineConnectorWithCompletion, IPipelineConnectorBuffered where TContext : class, IOperationContext
     {
 
         public static int DefaultBufferLength = 1000;
@@ -55,7 +55,7 @@ namespace Pipes.Implementation
             WithWait = true;
         }
 
-        public IPipelineConnectorAsyncBuffered OnSeparateThread()
+        public IPipelineConnectorBuffered OnSeparateThread()
         {
             OffThread = true;
             return this;
@@ -72,7 +72,7 @@ namespace Pipes.Implementation
             QueueLength = queueLength;
         }
 
-        public IPipelineConnectorAsync WithCompletion(int maxConcurrency = 0)
+        public IPipelineConnector WithCompletion(int maxConcurrency = 0)
         {
             MaxConcurrency = maxConcurrency;
             NeedsCompletion = true;
@@ -211,7 +211,7 @@ namespace Pipes.Implementation
             {
             }
 
-            public IPipelineConnectorAsyncWithCompletion To(Stub<TContext> target)
+            public IPipelineConnectorWithCompletion To(Stub<TContext> target)
             {
                 Target = target;
 

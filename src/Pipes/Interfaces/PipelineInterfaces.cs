@@ -59,7 +59,7 @@ namespace Pipes.Interfaces
 
     public interface IPipelineMessageSingleTarget<TContext> where TContext : class, IOperationContext
     {
-        IPipelineConnectorAsyncWithCompletion To(Stub<TContext> target);
+        IPipelineConnectorWithCompletion To(Stub<TContext> target);
     }
 
     public interface IPipelineMessageSingleTargetWithSubcontext<out TData, TContext> : IPipelineMessageSingleTarget<TContext> where TContext : class, IOperationContext where TData : class
@@ -71,20 +71,20 @@ namespace Pipes.Interfaces
         where TData : class
         where TContext : class, IOperationContext
     {
-        IPipelineConnectorAsync WhichTriggers(Action action);
-        IPipelineConnectorAsync WhichUnwrapsAndCalls(Action<TData> action);
-        IPipelineConnectorAsync WhichCalls(Action<IPipelineMessage<TData, TContext>> action);
+        IPipelineConnector WhichTriggers(Action action);
+        IPipelineConnector WhichUnwrapsAndCalls(Action<TData> action);
+        IPipelineConnector WhichCalls(Action<IPipelineMessage<TData, TContext>> action);
 
-        IPipelineConnectorAsync WhichTriggersAsync(Func<Task> asyncAction);
-        IPipelineConnectorAsync WhichUnwrapsAndCallsAsync(Func<TData, Task> asyncAction);
-        IPipelineConnectorAsync WhichCallsAsync(Func<IPipelineMessage<TData, TContext>, Task> asyncAction);
+        IPipelineConnector WhichTriggersAsync(Func<Task> asyncAction);
+        IPipelineConnector WhichUnwrapsAndCallsAsync(Func<TData, Task> asyncAction);
+        IPipelineConnector WhichCallsAsync(Func<IPipelineMessage<TData, TContext>, Task> asyncAction);
     }
 
 
 
     public interface IPipelineConnectorBase<TContext> where TContext : class, IOperationContext
     {
-        IPipelineConnectorAsyncWithCompletion SendsMessagesTo(Stub<TContext> target);
+        IPipelineConnectorWithCompletion SendsMessagesTo(Stub<TContext> target);
 
         IPipelineMessageSingleTargetWithSubcontext<TData, TContext> SendsMessage<TData>() where TData : class;
     }
@@ -93,36 +93,36 @@ namespace Pipes.Interfaces
     {
         IPipelineMessageChain<TContext> HasPrivateChannel();
 
-        IPipelineConnectorAsync BroadcastsAllMessages();
+        IPipelineConnector BroadcastsAllMessages();
 
-        IPipelineConnectorAsync BroadcastsAllMessagesPrivately();
+        IPipelineConnector BroadcastsAllMessagesPrivately();
     }
 
-    public interface IPipelineConnectorAsync
+    public interface IPipelineConnector
     {
-        IPipelineConnectorAsyncBuffered OnSeparateThread();
+        IPipelineConnectorBuffered OnSeparateThread();
 
         void InParallel();
     }
 
-    public interface IPipelineConnectorAsyncBuffered
+    public interface IPipelineConnectorBuffered
     {
         void WithQueueLengthOf(int queueLength);
     }
 
-    public interface IPipelineConnectorWithCompletion
+    public interface IPipelineConnectorWithCompletion : IPipelineConnector
     {
-        IPipelineConnectorAsync WithCompletion(int maxConcurrency = 0);
+        IPipelineConnector WithCompletion(int maxConcurrency = 0);
     }
 
-    public interface IPipelineConnectorAsyncWithCompletion : IPipelineConnectorWithCompletion, IPipelineConnectorAsync
-    {
+    //public interface IPipelineConnectorAsyncWithCompletion : IPipelineConnectorWithCompletion, IPipelineConnector
+    //{
         
-    }
+    //}
 
     public interface IPipelineMessageChain<TContext> where TContext : class, IOperationContext
     {
-        IPipelineConnectorAsync WhichSendsMessagesTo(Stub<TContext> target);
+        IPipelineConnector WhichSendsMessagesTo(Stub<TContext> target);
 
         IPipelineMessageSingleTargetWithSubcontext<TData, TContext> WhichSendsMessage<TData>() where TData : class;
     }

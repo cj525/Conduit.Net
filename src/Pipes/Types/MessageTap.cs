@@ -56,7 +56,7 @@ namespace Pipes.Types
         }
 
         
-        public IPipelineConnectorAsync WhichTriggers(Action target)
+        public IPipelineConnector WhichTriggers(Action target)
         {
             Blackhole = false;
             _messageTarget.Set(target);
@@ -64,7 +64,7 @@ namespace Pipes.Types
             return this;
         }
 
-        public IPipelineConnectorAsync WhichUnwrapsAndCalls(Action<TData> target)
+        public IPipelineConnector WhichUnwrapsAndCalls(Action<TData> target)
         {
             Blackhole = false;
             _messageTarget.Set(target);
@@ -72,7 +72,7 @@ namespace Pipes.Types
             return this;
         }
 
-        public IPipelineConnectorAsync WhichCalls(Action<IPipelineMessage<TData,TContext>> target)
+        public IPipelineConnector WhichCalls(Action<IPipelineMessage<TData,TContext>> target)
         {
             Blackhole = false;
             _messageTarget.Set(target);
@@ -80,7 +80,7 @@ namespace Pipes.Types
             return this;
         }
 
-        public IPipelineConnectorAsync WhichTriggersAsync(Func<Task> target)
+        public IPipelineConnector WhichTriggersAsync(Func<Task> target)
          {
             Blackhole = false;
             _messageTarget.Set(target);
@@ -88,7 +88,7 @@ namespace Pipes.Types
             return this;
         }
 
-        public IPipelineConnectorAsync WhichUnwrapsAndCallsAsync(Func<TData, Task> target)
+        public IPipelineConnector WhichUnwrapsAndCallsAsync(Func<TData, Task> target)
         {
             Blackhole = false;
             _messageTarget.Set(target);
@@ -96,7 +96,7 @@ namespace Pipes.Types
             return this;
         }
 
-        public IPipelineConnectorAsync WhichCallsAsync(Func<IPipelineMessage<TData, TContext>, Task> target)
+        public IPipelineConnector WhichCallsAsync(Func<IPipelineMessage<TData, TContext>, Task> target)
         {
             Blackhole = false;
             _messageTarget.Set(target);

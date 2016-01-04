@@ -45,6 +45,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Implementation\PretendDb.cs" />
+    <Compile Include="Implementation\StockStream.cs" />
     <Compile Include="PipelineAdjuncts\ReflectionCache.cs" />
     <Compile Include="PipelineComponents\StockStatisticUpdater.cs" />
     <Compile Include="PipelineMessages\FieldedData.cs" />

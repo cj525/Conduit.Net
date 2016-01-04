@@ -36,12 +36,12 @@ namespace Pipes.Types
         private ulong _version;
         private bool _isDisposed;
 
-        public CompletionBuffer(CompletionAction completionAction = null, CancelAction cancelAction = null, FaultAction faultAction = null) : base(completionAction, cancelAction, faultAction)
+        public CompletionBuffer(CompletionAction completionAction = null, CancellationAction cancelAction = null, FaultAction faultAction = null) : base(completionAction, cancelAction, faultAction)
         {
             
         }
 
-        public CompletionBuffer(int maxItems = 0, CompletionAction completionAction = null, CancelAction cancelAction = null, FaultAction faultAction = null) : base(completionAction,cancelAction,faultAction)
+        public CompletionBuffer(int maxItems = 0, CompletionAction completionAction = null, CancellationAction cancelAction = null, FaultAction faultAction = null) : base(completionAction,cancelAction,faultAction)
         {
             _maxItems = maxItems;
             if (maxItems > 0)
