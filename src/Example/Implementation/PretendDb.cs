@@ -11,42 +11,55 @@ namespace Pipes.Example.Implementation
     {
         public static int WriteDelayMs = 15;
         public static int ReadDelayMs = 10;
-        public static int ScanDelayMs = 10;
+        public static int ScanDelayMs = 75;
 
-        private readonly object _mutex = new {};
-        private readonly Dictionary<long, object> _data;
+        private static readonly Dictionary<Type,Dictionary<long, object>> Storage = new Dictionary<Type, Dictionary<long, object>>();
+        private static readonly object Mutex = new { };
 
-        public PretendDb()
+
+        public static async Task StoreAsync<T>(long id, T data)
         {
-            _data = new Dictionary<long, object>();
-        }
-
-
-        public async Task StoreAsync<T>(long id, T data)
-        {
-            lock (_mutex)
+            var type = typeof(T);
+            lock (Mutex)
             {
-                if (_data.ContainsKey(id))
+                if (!Storage.ContainsKey(type))
                 {
-                    _data[id] = data;
+                    Storage.Add(type, new Dictionary<long, object>());
+                }
+            }
+            var bucket = Storage[type];
+            lock (bucket)
+            {
+                if (bucket.ContainsKey(id))
+                {
+                    bucket[id] = data;
                 }
                 else
                 {
-                    _data.Add(id, data);
+                    bucket.Add(id, data);
                 }
             }
 
             await Task.Delay(WriteDelayMs);
         }
 
-        public async Task<T> RetrieveAsync<T>(long id)
+        public static async Task<T> RetrieveAsync<T>(long id) where T: class, new()
         {
             var result = default(T);
-            lock (_mutex)
+            var type = typeof(T);
+            lock (Mutex)
             {
-                if (_data.ContainsKey(id))
+                if (!Storage.ContainsKey(type))
                 {
-                    result = (T) _data[id];
+                    return new T();
+                }
+            }
+            var bucket = Storage[type];
+            lock (bucket)
+            {
+                if (bucket.ContainsKey(id))
+                {
+                    result = (T)bucket[id];
                 }
             }
 
@@ -55,15 +68,24 @@ namespace Pipes.Example.Implementation
             return result;
         }
 
-        public async Task<IEnumerable<T>> ScanPessimisticAsync<T>(long startInclusive, long stopExclusive)
+        public static async Task<IEnumerable<T>> ScanPessimisticAsync<T>(long startInclusive, long stopExclusive)
         {
             var results = new List<T>();
-            lock (_mutex)
+            var type = typeof (T);
+            lock (Mutex)
             {
+                if (!Storage.ContainsKey(type))
+                {
+                    return Enumerable.Empty<T>();
+                }
+            }
+            var bucket = Storage[type];
+            lock ( bucket )
+            { 
                 for (long index = startInclusive; index < stopExclusive; index++)
                 {
-                    if (_data.ContainsKey(index))
-                        results.Add((T)_data[index]);
+                    if (bucket.ContainsKey(index))
+                        results.Add((T)bucket[index]);
                 }
             }
 
@@ -72,19 +94,29 @@ namespace Pipes.Example.Implementation
             return results;
         }
 
-        public async Task<IEnumerable<T>> ScanOptimisticAsync<T>(long startInclusive, long stopExclusive)
+        public static async Task<IEnumerable<T>> ScanOptimisticAsync<T>(long startInclusive, long stopExclusive)
         {
             var results = new List<T>();
 
+            var type = typeof(T);
+            lock (Mutex)
+            {
+                if (!Storage.ContainsKey(type))
+                {
+                    return Enumerable.Empty<T>();
+                }
+            }
+            var bucket = Storage[type];
+
             for (long index = startInclusive; index < stopExclusive; index++)
             {
-                if (_data.ContainsKey(index))
+                if (bucket.ContainsKey(index))
                 {
-                    lock (_mutex)
+                    lock (bucket)
                     {
-                        if (_data.ContainsKey(index))
+                        if (bucket.ContainsKey(index))
                         {
-                            results.Add((T)_data[index]);
+                            results.Add((T)bucket[index]);
                         }
                     }
                 }
@@ -94,7 +126,13 @@ namespace Pipes.Example.Implementation
             return results;
         }
 
-
+        public static void Clear()
+        {
+            lock (Mutex)
+            {
+                Storage.Clear();
+            }
+        }
 
 
 

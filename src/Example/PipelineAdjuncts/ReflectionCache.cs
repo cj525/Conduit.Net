@@ -29,7 +29,7 @@ namespace Pipes.Example.PipelineAdjuncts
             }
         }
 
-        public object Inflate(IEnumerable<string> fields, Func<string, string> deserializeField)
+        public T Inflate(IEnumerable<string> fields, Func<string, string> deserializeField)
         {
             var result = new T();
 

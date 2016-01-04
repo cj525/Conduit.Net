@@ -26,10 +26,25 @@ namespace Pipes.Example.PipelineComponents
             var context = message.Context;
             var data = message.Data;
 
-            var db = context.Retrieve<PretendDb>();
-            var stockTick = await db.RetrieveAsync<StockTick>(data.Id);
-            var stat = await db.RetrieveAsync<StockStatistic>(new StockStatistic {Symbol = stockTick.Symbol}.Id);
+            var stockTick = await PretendDb.RetrieveAsync<StockTick>(data.Id);
 
+            if (stockTick.Value == 0)
+            {
+                context.Cancel();
+            }
+            else
+            {
+                var stat = await PretendDb.RetrieveAsync<StockStatistic>(new StockStatistic { Symbol = stockTick.Symbol }.Id);
+
+                UpdateStatForStock(stat, stockTick);
+
+                await PretendDb.StoreAsync(stat.Id, stat);
+
+            }
+        }
+
+        public static void UpdateStatForStock(StockStatistic stat, StockTick stockTick)
+        {
             var newValue = stat.CurrentValue + stockTick.Value;
 
             if (!stat.High.HasValue || newValue > stat.High)
@@ -37,8 +52,6 @@ namespace Pipes.Example.PipelineComponents
 
             if (!stat.Low.HasValue || newValue < stat.Low)
                 stat.Low = newValue;
-
-            await db.StoreAsync(stat.Id, stat);
         }
     }
 }

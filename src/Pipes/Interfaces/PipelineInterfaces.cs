@@ -57,14 +57,14 @@ namespace Pipes.Interfaces
         void WhichCallsAsync(Func<IPipelineMessage<TData, TContext>, Task> asyncAction);
     }
 
-    public interface IPipelineMessageSingleTarget<TContext> where TContext : class, IOperationContext
+    public interface IPipelineMessageSingleTarget<out TData, TContext> where TContext : class, IOperationContext where TData : class
     {
-        IPipelineConnectorAsyncWithCompletion To(Stub<TContext> target);
+        IPipelineConnectorAsyncWithCompletion<TData, TContext> To(Stub<TContext> target);
     }
 
-    public interface IPipelineMessageSingleTargetWithSubcontext<out TData, TContext> : IPipelineMessageSingleTarget<TContext> where TContext : class, IOperationContext where TData : class
+    public interface IPipelineMessageSingleTargetWithSubcontext<out TData, TContext> : IPipelineMessageSingleTarget<TData, TContext> where TContext : class, IOperationContext where TData : class
     {
-        IPipelineMessageSingleTarget<TContext> WithSubcontext(Func<IPipelineMessage<TData,TContext>, TContext> branchFn);
+        IPipelineMessageSingleTarget<TData, TContext> WithSubcontext<TSourceContext>(Func<IPipelineMessage<TData, TSourceContext>, TContext> subcontextFactory) where TSourceContext : class, IOperationContext;
     }
 
     public interface IPipelineMessageTap<out TData, TContext>
@@ -84,7 +84,7 @@ namespace Pipes.Interfaces
 
     public interface IPipelineConnectorBase<TContext> where TContext : class, IOperationContext
     {
-        IPipelineConnectorAsyncWithCompletion SendsMessagesTo(Stub<TContext> target);
+        IPipelineConnectorAsync SendsMessagesTo(Stub<TContext> target);
 
         IPipelineMessageSingleTargetWithSubcontext<TData, TContext> SendsMessage<TData>() where TData : class;
     }
@@ -110,12 +110,13 @@ namespace Pipes.Interfaces
         void WithQueueLengthOf(int queueLength);
     }
 
-    public interface IPipelineConnectorWithCompletion
+    public interface IPipelineConnectorWithCompletion<out TData, TContext> where TContext : class, IOperationContext where TData : class
     {
         IPipelineConnectorAsync WithCompletion(int maxConcurrency = 0);
+        IPipelineConnectorAsync WithCompletion(Action<IPipelineCompletion<TData, TContext>> initializer);
     }
 
-    public interface IPipelineConnectorAsyncWithCompletion : IPipelineConnectorWithCompletion, IPipelineConnectorAsync
+    public interface IPipelineConnectorAsyncWithCompletion<out TData, TContext> : IPipelineConnectorWithCompletion<TData, TContext>, IPipelineConnectorAsync where TContext : class, IOperationContext where TData : class
     {
         
     }
@@ -125,5 +126,21 @@ namespace Pipes.Interfaces
         IPipelineConnectorAsync WhichSendsMessagesTo(Stub<TContext> target);
 
         IPipelineMessageSingleTargetWithSubcontext<TData, TContext> WhichSendsMessage<TData>() where TData : class;
+    }
+
+    public interface IPipelineCompletion<out TData, TContext> : IPipelineCompletionCallbacks<TData, TContext> where TContext : class, IOperationContext where TData : class 
+    {
+        IPipelineCompletionCallbacks<TData,TContext> WithMaximumConcurrency(int maxConcurrency);
+
+        IPipelineCompletionCallbacks<TData, TContext> WithUnlimitedConcurrency(int maxConcurrency);
+    }
+
+    public interface IPipelineCompletionCallbacks<out TData,TContext> where TContext : class, IOperationContext where TData : class
+    {
+        IPipelineCompletionCallbacks<TData,TContext> OnCompletion(Action<IPipelineMessage<TData,TContext>> messageCompletionAction);
+
+        IPipelineCompletionCallbacks<TData, TContext> OnCancellation(Action<IPipelineMessage<TData, TContext>> messageCancellationAction);
+
+        IPipelineCompletionCallbacks<TData, TContext> OnFault(Action<IPipelineMessage<TData, TContext>> messageFaultAction);
     }
 }

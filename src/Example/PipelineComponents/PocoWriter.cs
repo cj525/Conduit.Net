@@ -29,11 +29,8 @@ namespace Pipes.Example.PipelineComponents
             var context = message.Context;
             var data = message.Data;
 
-            // Get database connection (would be from connection pool factory)
-            var db = context.Ensure(() => new PretendDb());
-
             // Store the data
-            await db.StoreAsync(data.Id, data);
+            await PretendDb.StoreAsync(data.Id, data);
 
             // Emit indicator that the poco is commited
             await EmitAsync(message, new PocoCommited<T>(data));

@@ -36,24 +36,6 @@ namespace Pipes.Abstraction
             pipeline.ApplyOver(_attachActions);
         }
 
-        //[DebuggerHidden]
-        //protected void Emit<TData>(TData data, TContext context = default(TContext)) where TData : class
-        //{
-        //    if (_pipeline == null)
-        //        throw new NotAttachedException("Unattached Component cannot transmit.");
-
-        //    _pipeline.EmitMessage(new PipelineMessage<TData,TContext>(_pipeline, this, data, context));
-        //}
-
-        //[DebuggerHidden]
-        //protected Task EmitAsync<TData>(TData data, TContext context = default(TContext)) where TData : class
-        //{
-        //    if (_pipeline == null)
-        //        throw new NotAttachedException("Unattached Component cannot transmit.");
-
-        //    return _pipeline.EmitMessageAsync(new PipelineMessage<TData,TContext>(_pipeline, this, data, context));
-        //}
-
         [DebuggerHidden]
         protected void Emit<T>(IPipelineMessage<TContext> message, T data, TContext subcontext = default(TContext)) where T : class
         {

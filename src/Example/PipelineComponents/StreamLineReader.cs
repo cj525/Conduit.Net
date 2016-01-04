@@ -63,17 +63,19 @@ namespace Pipes.Example.PipelineComponents
         {
             private readonly TextReader _reader;
             private string _line;
-
-            internal StreamLoop(StreamLineReader component, StreamMessage message, TextReader reader) : base(component, message)
+            private int _lineNumber;
+            internal StreamLoop(StreamLineReader component, StreamMessage message, TextReader reader, int headerLineCount = 1) : base(component, message)
             {
                 _reader = reader;
+                _lineNumber = headerLineCount;
             }
 
-            protected override StreamLine Current => new StreamLine {Data = _line};
+            protected override StreamLine Current => new StreamLine {Data = _line, LineNumber = _lineNumber};
 
             protected override async Task<bool> AdvanceAsync()
             {
                 _line = await _reader.ReadLineAsync();
+                _lineNumber++;
 
                 return _line != null;
             }

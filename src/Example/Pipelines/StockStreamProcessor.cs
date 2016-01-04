@@ -8,6 +8,9 @@ using System.Threading.Tasks;
 using Pipes.Abstraction;
 using Pipes.Example.PipelineComponents;
 using Pipes.Example.PipelineContexts;
+using Pipes.Example.PipelineMessages;
+using Pipes.Example.Schema;
+using Pipes.Example.Schema.Abstraction;
 using Pipes.Interfaces;
 using Pipes.Types;
 
@@ -37,22 +40,49 @@ namespace Pipes.Example.Pipelines
                 .Into(ref parser);
 
             thisPipeline
-                .Constructs(()=>new PocoEmitter())
+                .Constructs(()=>new PocoEmitter<StockTick>())
                 .Into(ref emitter);
 
             thisPipeline
-                .Constructs(()=>new PocoWriter())
+                .Constructs(()=>new PocoWriter<PocoWithId>())
                 .Into(ref writer);
 
             thisPipeline
                 .Constructs(()=>new StockStatisticUpdater())
                 .Into(ref updater);
 
+            reader
+                // When each line is sent
+                .SendsMessage<StreamLine>()
+                // Create a subcontext for each line
+                .WithSubcontext<StockStreamContext>(message => new LineNumberContext {Line = message.Data.LineNumber})
+                .To(parser)
+                // Ensure completion 
+                .WithCompletion( _ => _
+                    // And throttle to 500 concurrent messages
+                    .WithMaximumConcurrency( 500 )
+                    .OnCancellation(HandleCancellation)
+                );
+
+            emitter
+                .SendsMessage<StockTick>()
+                .WithSubcontext<PocoWithIdContext>(message => new PocoWithIdContext {Type = message.Data?.GetType(), StockId = message.Data?.Id ?? -1})
+                .To(writer);
+        }
+
+        private void HandleCancellation(IPipelineMessage<StreamLine, IOperationContext> message)
+        {
+            // TODO: Could reach into data stack?  Would need to make a new message.
+            // source -> [HasCompletion] -> Other -> [Cancellation]
+            //                  ^ This message             ^ Message that was cancelled
+
+            // For now, escalate the cancel to a fault
+            message.Context.Fault( "Cancel escalated to fault!" );
         }
 
         public async Task ProcessStream(string name, Stream stream)
         {
-            var context = new PocosFromStreamContext { Name = name };
+            var context = new StockStreamContext { Name = name };
             await _entryPoint(stream, context);
         }
     }

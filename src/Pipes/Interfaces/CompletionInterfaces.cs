@@ -20,7 +20,7 @@ namespace Pipes.Interfaces
     /// </summary>
     public interface ICancellable
     {
-        void Cancel(string reason);
+        void Cancel(string reason = null);
 
         bool IsCancelled { get; }
     }

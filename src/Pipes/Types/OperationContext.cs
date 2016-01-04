@@ -21,6 +21,7 @@ namespace Pipes.Types
 
         private int _messagesInFlight;
         private int _contextHolds;
+        private CompletionSource _completion;
         
 
         public OperationContext()

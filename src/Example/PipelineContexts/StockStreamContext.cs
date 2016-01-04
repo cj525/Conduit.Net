@@ -7,7 +7,7 @@ using Pipes.Types;
 
 namespace Pipes.Example.PipelineContexts
 {
-    class PocosFromStreamContext : OperationContext
+    class StockStreamContext : OperationContext
     {
         public string Name { get; set; }
     }

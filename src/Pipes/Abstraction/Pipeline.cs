@@ -77,7 +77,7 @@ namespace Pipes.Abstraction
 
         protected virtual void HandleUnknownMessage<T>(IPipelineMessage<T, TContext> message) where T : class
         {
-            throw new UnhandledMessageInPipeline(typeof (T), message);
+            throw new UnhandledMessageInPipeline(typeof (T), (IPipelineMessage<IOperationContext>) message);
         }
 
         protected internal virtual bool HandleException(PipelineException<TContext> pipelineException)
@@ -440,26 +440,26 @@ namespace Pipes.Abstraction
             _exceptionHandler = exceptionHandler;
         }
 
-        [DebuggerHidden]
-        public void Emit<T>(T data, TContext context) where T : class
-        {
-            Emit(null, data, context);
-        }
+        //[DebuggerHidden]
+        //public void Emit<T>(T data, TContext context) where T : class
+        //{
+        //    Emit(null, data, context);
+        //}
+
+        //[DebuggerHidden]
+        //public Task EmitAsync<T>(T data, TContext context) where T : class
+        //{
+        //    return EmitAsync(null, data, context);
+        //}
 
         [DebuggerHidden]
-        public Task EmitAsync<T>(T data, TContext context) where T : class
-        {
-            return EmitAsync(null, data, context);
-        }
-
-        [DebuggerHidden]
-        public void EmitMessage<T>(IPipelineMessage<T,TContext> message) where T : class
+        internal void EmitMessage<T>(IPipelineMessage<T,TContext> message) where T : class
         {
             RouteMessage(message).Wait();
         }
 
         [DebuggerHidden]
-        public Task EmitMessageAsync<T>(IPipelineMessage<T, TContext> message) where T : class
+        internal Task EmitMessageAsync<T>(IPipelineMessage<T, TContext> message) where T : class
         {
             return RouteMessage(message);
         }
