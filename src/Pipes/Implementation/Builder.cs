@@ -21,7 +21,17 @@ namespace Pipes.Implementation
             _pipeline = pipeline;
         }
 
-        public IPipelineInvocation<TContext> IsInvokedBy<TData>(ref Action<TData, TContext> trigger) where TData : class
+        public IPipelineInvocation<TContext> IsInvokedBy<TData>(ref Action<TData, object> trigger) where TData : class
+        {
+            if (_component != null)
+            {
+                throw new NotSupportedException("Only the pipeline may declare an invocation.");
+                //return new Invocation<T>(_component, ref trigger);
+            }
+
+            return new Invocation<TData, TContext>(_pipeline, ref trigger);
+        }
+        public IPipelineInvocation<TContext> IsInvokedBy<TData>(ref Action<TData> trigger) where TData : class
         {
             if (_component != null)
             {
@@ -32,7 +42,17 @@ namespace Pipes.Implementation
             return new Invocation<TData,TContext>(_pipeline, ref trigger);
         }
 
-        public IPipelineInvocation<TContext> IsInvokedAsyncBy<TData>(ref Func<TData, TContext, Task> trigger) where TData : class
+        public IPipelineInvocation<TContext> IsInvokedAsyncBy<TData>(ref Func<TData, object, Task> trigger) where TData : class
+        {
+            if (_component != null)
+            {
+                throw new NotSupportedException("Only the pipeline may declare an invocation.");
+                //return new Invocation<T>(_component, ref trigger);
+            }
+
+            return new Invocation<TData, TContext>(_pipeline, ref trigger);
+        }
+        public IPipelineInvocation<TContext> IsInvokedAsyncBy<TData>(ref Func<TData, Task> trigger) where TData : class
         {
             if (_component != null)
             {
@@ -52,16 +72,6 @@ namespace Pipes.Implementation
             }
 
             return new Constructor<TComponent,TContext>(_pipeline, ctor);
-        }
-
-        public IPipelineConstructorMany<TContext> ConstructsMany(int count)
-        {
-            if (_component != null)
-            {
-                throw new NotSupportedException("Only the pipeline may declare a constructor manifold.");
-            }
-
-            return new ConstructorManifold<TContext>(_pipeline,count);
         }
 
         public IPipelineComponentEmissionBuilder<TContext> Emits<T>() where T : class

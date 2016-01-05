@@ -16,7 +16,6 @@ namespace Pipes.Tests.Simple
 
         private void TestAddMultipleFormatPipe(int input, string output)
         {
-            throw new Exception("Stack overflow due to message broadcast hack");
             var pipeline = new BasicServicePipe.Add2Times2Formatted {Add = 2, ThenMultiply = 3};
             pipeline.Initialize();
             pipeline.Invoke(input);
@@ -51,18 +50,14 @@ namespace Pipes.Tests.Simple
 
                 public string Result { get; private set; }
 
-                public Add2Times2Formatted()
+                public override void Initialize()
                 {
+                    CreateMessageTap<StringValue>().WhichUnwrapsAndCalls(sz => Result = sz.Value);
+
+                    base.Initialize();
                 }
 
-                public void Initialize()
-                {
-                    Build();
-
-                    CreateMessageTap<string>().WhichUnwrapsAndCalls(value => Result = value);
-                }
-
-                protected override void Describe(IPipelineBuilder thisPipeline)
+                protected override void Describe(IPipelineBuilder<IOperationContext> thisPipeline)
                 {
                     var addTwo = Component;
                     var timesTwo = Component;
@@ -89,8 +84,6 @@ namespace Pipes.Tests.Simple
                     toString.BroadcastsAllMessages();
                 }
             }
-
         }
-
     }
 }

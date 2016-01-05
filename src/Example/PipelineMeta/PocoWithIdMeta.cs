@@ -5,10 +5,11 @@ using System.Text;
 using System.Threading.Tasks;
 using Pipes.Types;
 
-namespace Pipes.Example.PipelineContexts
+namespace Pipes.Example.PipelineMeta
 {
-    class LineNumberContext : OperationContext
+    class PocoWithIdMeta
     {
-        public int Line { get; set; }
+        public long StockId { get; set; }
+        public Type Type { get; set; }
     }
 }

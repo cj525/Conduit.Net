@@ -1,5 +1,6 @@
 ﻿using Pipes.Abstraction;
 using Pipes.Interfaces;
+using Pipes.Tests.Simple;
 
 namespace Pipes.Tests.Components
 {
@@ -7,29 +8,19 @@ namespace Pipes.Tests.Components
     {
         public int Value { get; set; }
 
-        protected override void Describe(IPipelineComponentBuilder thisComponent)
+        protected override void Describe(IPipelineComponentBuilder<IOperationContext> thisComponent)
         {
             thisComponent
-                .Receives<object>()
-                .WhichUnwrapsAndCalls(AddToTwo);
+                .Receives<IntValue>()
+                .WhichCalls(AddToTwo);
 
             thisComponent
-                .Emits<object>();
+                .Emits<IntValue>();
         }
 
-        private void AddToTwo(object x)
+        private void AddToTwo(IPipelineMessage<IntValue, IOperationContext> message)
         {
-            Emit((object)((int)x + Value));
-        }
-
-        public class AddedInt
-        {
-            public int Value { get; set; }
-
-            public AddedInt(int value)
-            {
-                Value = value;
-            }
-        }
+            Emit(message, new IntValue {Value = message.Data.Value*Value});
+        } 
     }
 }

@@ -16,7 +16,10 @@ namespace Pipes.Abstraction
 {
     public abstract class Pipeline : Pipeline<IOperationContext>
     {
-            
+        protected internal override IOperationContext ConstructContext()
+        {
+            return new OperationContext();
+        }
     }
 
     public abstract class Pipeline<TContext> : IDisposable where TContext : class, IOperationContext
@@ -63,6 +66,8 @@ namespace Pipes.Abstraction
             Build();
         }
 
+        protected internal abstract TContext ConstructContext();
+
 
         protected virtual void MessageInFlight<T>(IPipelineMessage<T, TContext> message) where T : class
         {
@@ -77,13 +82,15 @@ namespace Pipes.Abstraction
 
         protected virtual void HandleUnknownMessage<T>(IPipelineMessage<T, TContext> message) where T : class
         {
-            throw new UnhandledMessageInPipeline(typeof (T), (IPipelineMessage<IOperationContext>) message);
+            throw new UnhandledMessageInPipeline(typeof (T), message);
         }
 
         protected internal virtual bool HandleException(PipelineException<TContext> pipelineException)
         {
             return false;
         }
+
+        protected Task NoOp => Target.EmptyTask;
 
         /// <summary>
         /// Build and attach all pipeline components
@@ -368,17 +375,17 @@ namespace Pipes.Abstraction
 
         private Task InvokeRoute<T>(IPipelineMessage<T, TContext> message, Conduit<TContext> target) where T : class
         {
-            var context = message.Context;
-            if (target.ContextBrancher != null)
-            {
-                var subcontext = target.ContextBrancher(message);
-                message = new PipelineMessage<T, TContext>(this, message.Sender, message.Data, subcontext);
-                if (target.NeedsCompletion)
-                {
-                    //if( context.RegisterOnCompletion())
-                    //target.Invoke()
-                }
-            }
+            //var context = message.Context;
+            //if (target.ContextBrancher != null)
+            //{
+            //    var subcontext = target.ContextBrancher(message);
+            //    message = new PipelineMessage<T, TContext>(this, message.Sender, message.Data, message.Context);
+            //    if (target.NeedsCompletion)
+            //    {
+            //        //if( context.RegisterOnCompletion())
+            //        //target.Invoke()
+            //    }
+            //}
 
             return target.Invoke(message);
         }
@@ -519,19 +526,19 @@ namespace Pipes.Abstraction
         }
 
 
-        // ReSharper disable once MemberCanBePrivate.Global
-        internal void Emit<T>(IPipelineComponent<TContext> sender, T data, TContext context) where T : class
-        {
-            var message = new PipelineMessage<T, TContext>(this, sender, data, context);
-            EmitMessage(message);
-        }
+        //// ReSharper disable once MemberCanBePrivate.Global
+        //internal void Emit<T>(IPipelineComponent<TContext> sender, T data, TContext context) where T : class
+        //{
+        //    var message = new PipelineMessage<T, TContext>(this, sender, data, context);
+        //    EmitMessage(message);
+        //}
 
-        // ReSharper disable once MemberCanBePrivate.Global
-        internal Task EmitAsync<T>(IPipelineComponent<TContext> sender, T data, TContext context) where T : class
-        {
-            var message = new PipelineMessage<T, TContext>(this, sender, data, context);
-            return EmitMessageAsync(message);
-        }
+        //// ReSharper disable once MemberCanBePrivate.Global
+        //internal Task EmitAsync<T>(IPipelineComponent<TContext> sender, T data, TContext context) where T : class
+        //{
+        //    var message = new PipelineMessage<T, TContext>(this, sender, data, context);
+        //    return EmitMessageAsync(message);
+        //}
 
 
         #endregion
@@ -548,13 +555,13 @@ namespace Pipes.Abstraction
 
         public class UnhandledMessageInPipeline : Exception
         {
-            public IPipelineMessage<TContext> Message { get; private set; }
+            public IPipelineMessage<TContext> PipelineMessage { get; private set; }
 
             public Type DataType { get; private set; }
 
             public UnhandledMessageInPipeline(Type type, IPipelineMessage<TContext> message)
             {
-                Message = message;
+                PipelineMessage = message;
                 DataType = type;
             }
         }

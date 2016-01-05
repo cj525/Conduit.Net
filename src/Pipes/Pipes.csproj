@@ -21,7 +21,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <LangVersion>default</LangVersion>
+    <LangVersion>6</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -60,6 +60,7 @@
     <Compile Include="Interfaces\CompletionInterfaces.cs" />
     <Compile Include="Interfaces\ContextInterfaces.cs" />
     <Compile Include="Types\CompletionBuffer.cs" />
+    <Compile Include="Types\CompletionEvents.cs" />
     <Compile Include="Types\OperationContext.cs" />
     <Compile Include="Types\QueueThread.cs" />
     <Compile Include="Implementation\MessageTarget.cs" />

@@ -54,8 +54,8 @@
     <Compile Include="Implementation\StockStream.cs" />
     <Compile Include="PipelineAdjuncts\ReflectionCache.cs" />
     <Compile Include="PipelineComponents\StockStatisticUpdater.cs" />
-    <Compile Include="PipelineContexts\StreamLineContext.cs" />
-    <Compile Include="PipelineContexts\PocoWithIdContext.cs" />
+    <Compile Include="PipelineMeta\LineNumberMeta.cs" />
+    <Compile Include="PipelineMeta\PocoWithIdMeta.cs" />
     <Compile Include="PipelineMessages\FieldedData.cs" />
     <Compile Include="PipelineMessages\PocoCommited.cs" />
     <Compile Include="PipelineMessages\StreamEnded.cs" />
@@ -68,8 +68,8 @@
     <Compile Include="PipelineComponents\PocoEmitter.cs" />
     <Compile Include="PipelineComponents\PocoWriter.cs" />
     <Compile Include="PipelineComponents\StreamLineReader.cs" />
-    <Compile Include="PipelineContexts\StockStreamContext.cs" />
-    <Compile Include="Pipelines\StockStreamProcessor.cs" />
+    <Compile Include="PipelineMeta\StockStreamMeta.cs" />
+    <Compile Include="Pipelines\StockStreamPipeline.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -7,7 +7,7 @@ namespace Pipes.Interfaces
 {
 
     // TODO: Rename to IPipelineContext
-    public interface IOperationContext : IDisposable, ICompletionSource
+    public interface IOperationContext : IDisposable, ICompletionSource, ICompletionToken
     {
         void AcquireContextHold();
 
@@ -15,19 +15,17 @@ namespace Pipes.Interfaces
 
         void ReleaseContextHold();
 
-        CompletionManifold BranchCompletion();
-
         void Close();
 
         void MessageCompleted();
 
         void MessageInFlight();
 
-        void RegisterOnCancellation(CancellationAction action);
+        void RegisterOnCancellation(CancellationTask task);
 
-        void RegisterOnCompletion(CompletionAction action);
+        void RegisterOnCompletion(CompletionTask task);
 
-        void RegisterOnFault(FaultAction action);
+        void RegisterOnFault(FaultTask task);
 
 
         bool ContainsAdjunctAssignableTo<T>();
@@ -51,7 +49,7 @@ namespace Pipes.Interfaces
 
         T Store<T>(T adjunct);
 
-        Task WaitForIdle(int waitTimeSliceMs);
+        
     }
 
 

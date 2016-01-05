@@ -14,13 +14,24 @@ namespace Pipes.BuildingBlocks
         private readonly InvocationStub<TData,TContext> _proxy;
         private bool _blackhole = true;
 
-        public Invocation(Pipeline<TContext> pipeline, ref Action<TData,TContext> trigger) : base(pipeline)
+        public Invocation(Pipeline<TContext> pipeline, ref Action<TData, object> trigger) : base(pipeline)
         {
             _proxy = new InvocationStub<TData, TContext>();
-            _proxy.GetTrigger(ref trigger);
+            _proxy.GetInvocation(ref trigger);
+        }
+        public Invocation(Pipeline<TContext> pipeline, ref Action<TData> trigger) : base(pipeline)
+        {
+            _proxy = new InvocationStub<TData, TContext>();
+            _proxy.GetInvocation(ref trigger);
         }
 
-        public Invocation(Pipeline<TContext> pipeline, ref Func<TData, TContext, Task> trigger) : base(pipeline)
+        public Invocation(Pipeline<TContext> pipeline, ref Func<TData, object, Task> trigger) : base(pipeline)
+        {
+            _proxy = new InvocationStub<TData, TContext>();
+            _proxy.GetAsyncTrigger(ref trigger);
+        }
+
+        public Invocation(Pipeline<TContext> pipeline, ref Func<TData, Task> trigger) : base(pipeline)
         {
             _proxy = new InvocationStub<TData, TContext>();
             _proxy.GetAsyncTrigger(ref trigger);

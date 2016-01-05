@@ -15,8 +15,6 @@ namespace Pipes.Example.PipelineComponents
 {
     class StreamLineReader : PipelineComponent
     {
-        
-
         private static readonly string[] DelimitersToTry = { ",", "\t"};
 
         protected override void Describe(IPipelineComponentBuilder<IOperationContext> thisComponent)
@@ -49,7 +47,7 @@ namespace Pipes.Example.PipelineComponents
                 }
 
                 if( !context.ContainsAdjunctOfType<ParserConfig>())
-                    context.Fault("Can't determine delimiter");
+                    await context.Fault("Can't determine delimiter");
                 else
                 {
                     await Loop(context, new StreamLoop(this, message, textReader));

@@ -37,9 +37,9 @@ namespace Pipes.Abstraction
         }
 
         [DebuggerHidden]
-        protected void Emit<T>(IPipelineMessage<TContext> message, T data, TContext subcontext = default(TContext)) where T : class
+        protected void Emit<T>(IPipelineMessage<TContext> message, T data, object meta = null) where T : class
         {
-            message.Chain(this, data, subcontext);
+            message.Chain(this, data, meta);
         }
 
         [DebuggerHidden]
@@ -95,7 +95,7 @@ namespace Pipes.Abstraction
                     if (!_message.HandleException(exception))
                     {
                         // Cancel the context (which will cancel the loop)
-                        _message.Context.Fault(exception);
+                        await _message.Context.Fault(exception);
                     }
                 }
             }
@@ -180,10 +180,10 @@ namespace Pipes.Abstraction
             public Observer(PipelineComponent<TContext> component, IPipelineMessage<TContext> message, object aux)
             {
                 if (component == null)
-                    throw new ArgumentNullException("component");
+                    throw new ArgumentNullException(nameof(component));
 
                 if (message == null)
-                    throw new ArgumentNullException("message");
+                    throw new ArgumentNullException(nameof(message));
 
                 _aux = aux;
                 _message = message;
@@ -196,7 +196,8 @@ namespace Pipes.Abstraction
 
                 if (_emitComplete)
                 {
-                    _component.Emit(_message, complete);
+                    //_message.Chain(_component, complete);
+                    _component.Emit(_message, complete, new ObserverMeta(typeof(TData)));
                 }
 
                 _disposables.Apply(item => item.Dispose());
@@ -244,6 +245,17 @@ namespace Pipes.Abstraction
 
                 return this;
             }
+        }
+
+        public class ObserverMeta
+        {
+            public Type OfType { get; }
+
+            public ObserverMeta(Type type)
+            {
+                OfType = type;
+            }
+
         }
     }
 }

@@ -26,104 +26,38 @@ namespace Pipes.Stubs
         {
         }
 
-        private async Task Trigger(TData data, TContext context) 
+        private async Task Invoke(TData data, object meta = null) 
         {
-            var message = new PipelineMessage<TData,TContext>(Pipeline, Component, data, context);
+            var message = new PipelineMessage<TData,TContext>(Pipeline, Component, data, Pipeline.ConstructContext(), null, meta);
             await Pipeline.RouteMessage(message);
         }
 
         // ReSharper disable once RedundantAssignment
-        internal void GetTrigger(ref Action<TData,TContext> trigger)
+        internal void GetInvocation(ref Action<TData> trigger)
         {
-            trigger = (data, token) => Trigger(data,token).Wait();
+            trigger = (data) => Invoke(data).Wait();
         }
 
         // ReSharper disable once RedundantAssignment
-        internal void GetAsyncTrigger(ref Func<TData, TContext, Task> trigger)
+        internal void GetInvocation(ref Action<TData, object> trigger)
         {
-            trigger = Trigger;
+            trigger = (data, meta) => Invoke(data, meta).Wait();
+        }
+
+        // ReSharper disable once RedundantAssignment
+        internal void GetAsyncTrigger(ref Func<TData, Task> trigger)
+        {
+            trigger = (data) => Invoke(data);
+        }
+        // ReSharper disable once RedundantAssignment
+        internal void GetAsyncTrigger(ref Func<TData, object, Task> trigger)
+        {
+            trigger = Invoke;
         }
 
         internal void SetTarget(Stub<TContext> target)
         {
-            // IsConstructed = false
             Target = target;
         }
-
-        //internal void SetConstructor<TInstance>(Func<T, TInstance> ctor)
-        //{
-        //    IsConstructed = true;
-        //    Func<T, TInstance> hook = (T arg) =>
-        //    {
-        //        var instance = ctor(arg);
-        //        var component = instance as PipelineComponent;
-        //        if (component != null)
-        //        {
-        //            component.Build();
-        //            component.AttachTo(Pipeline);
-        //            Pipeline.AttachComponent(component);
-                    
-        //            // Hack, changes made after startup
-        //            Pipeline.AttachRxTx();
-        //            Pipeline.LinkChannels();
-        //        }
-
-        //        return instance;
-        //    };
-
-        //    _target = new Target<TInstance>(hook, ref _trigger);
-        //}
-
-
-
-        //internal void ApplyTarget<TInstance>(Action<Target<TInstance>> action)
-        //{
-        //    action((Target<TInstance>) _target);
-        //}
-
-        //internal class Target<TInstance> : Target
-        //{
-        //    private readonly Func<T, TInstance> _ctor;
-        //    private Func<TInstance, Task> _trigger;
-        //    private Action<TInstance> _init;
-        //    private TInstance _instance;
-
-        //    // ReSharper disable once RedundantAssignment
-        //    public Target(Func<T, TInstance> ctor, ref Func<T,Task> trigger)
-        //    {
-        //        _ctor = ctor;
-        //        trigger = Trigger;
-        //    }
-        //    // TODO: Clean up the anons
-        //    internal void SetTrigger(Action<TInstance> trigger)
-        //    {
-        //        _trigger = data =>
-        //        {
-        //            trigger(data);
-
-        //            return EmptyTask;
-        //        };
-        //    }
-        //    internal void SetAsyncTrigger(Func<TInstance, Task> trigger)
-        //    {
-        //        _trigger = trigger;
-        //    }
-
-        //    internal void SetInitializer(Action<TInstance> init)
-        //    {
-        //        _init = init;
-        //    }
-
-        //    private Task Trigger(T data)
-        //    {
-        //        // TODO: Register instance for disposal?
-        //        _instance = _ctor(data);
-
-        //        if (_init != null)
-        //            _init(_instance);
-
-        //        return _trigger(_instance);
-        //    }
-        //}
     }
 }

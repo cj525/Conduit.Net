@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Pipes.Abstraction;
 using Pipes.Interfaces;
 
@@ -36,12 +37,7 @@ namespace Pipes.Types
         private ulong _version;
         private bool _isDisposed;
 
-        public CompletionBuffer(CompletionAction completionAction = null, CancellationAction cancelAction = null, FaultAction faultAction = null) : base(completionAction, cancelAction, faultAction)
-        {
-            
-        }
-
-        public CompletionBuffer(int maxItems = 0, CompletionAction completionAction = null, CancellationAction cancelAction = null, FaultAction faultAction = null) : base(completionAction,cancelAction,faultAction)
+        public CompletionBuffer(int maxItems = 0)
         {
             _maxItems = maxItems;
             if (maxItems > 0)
@@ -67,17 +63,17 @@ namespace Pipes.Types
             get { lock (_lockObject) return  _count == _maxItems && _maxItems > 0; }
         }
 
-        public ICompletionSource<T> AddWithSingleAction(T data, Action onAnything)
+        public Slot AddItemWithSingleAction(T data, Func<Task> onAnything)
         {
-            return Add(data, () => onAnything(), reason => onAnything(), (reason, exception) => onAnything());
+            return AddItem(data, () => onAnything(), reason => onAnything(), (reason, exception) => onAnything());
         }
 
-        public ICompletionSource<T> Add(T data, CompletionAction onSuccess, FaultAction onFailure)
+        public Slot AddItemWithSuccessOrFailure(T data, CompletionTask onSuccess, FaultTask onFailure)
         {
-            return Add(data, onSuccess, (reason) => onFailure(reason), onFailure);
+            return AddItem(data, onSuccess, (reason) => onFailure(reason), onFailure);
         }
 
-        public ICompletionSource<T> Add(T data, CompletionAction completionAction = null, CancelAction cancelAction = null, FaultAction faultAction = null)
+        public Slot AddItem(T data, CompletionTask completionTask = null, CancellationTask cancellationTask = null, FaultTask faultTask = null)
         {
             if (_maxItems > 0 )
             {
@@ -89,7 +85,7 @@ namespace Pipes.Types
 
             lock (_lockObject)
             {
-                _tail = new Slot(this, data, _tail, completionAction, cancelAction, faultAction);
+                _tail = new Slot(this, data, _tail, completionTask, cancellationTask, faultTask);
 
                 if (_head == null)
                 {
@@ -157,8 +153,22 @@ namespace Pipes.Types
             if (_version == ulong.MaxValue)
                 _version = 0;
         }
-        public void Cancel()
+
+        public override async Task Cancel(string reason = null)
         {
+            await base.Cancel(reason);
+            _semaphoreCancelSource.Cancel();
+        }
+
+        public override async Task Fault(Exception exception)
+        {
+            await base.Fault(exception);
+            _semaphoreCancelSource.Cancel();
+        }
+
+        public override async Task Fault(string reason, Exception exception = null)
+        {
+            await base.Fault(reason, exception);
             _semaphoreCancelSource.Cancel();
         }
 
@@ -184,11 +194,12 @@ namespace Pipes.Types
         public void Dispose()
         {
             _isDisposed = true;
+            _semaphoreCancelSource.Dispose();
             _semaphore.Dispose();
         }
 
         [SuppressMessage("ReSharper", "MemberCanBePrivate.Global", Justification = "Paired methods, Next/Previous, would look silly with different access modifier naming.")]
-        protected class Slot : CompletionSource, ICompletionSource<T>, IBranchableCompletionSource
+        public class Slot : CompletionSource
         {
             private readonly CompletionBuffer<T> _container;
             internal Slot Previous;
@@ -196,7 +207,7 @@ namespace Pipes.Types
 
             public T Data { get; private set; }
 
-            internal Slot(CompletionBuffer<T> container, T data, Slot previous, CompletionAction completionAction = null, CancelAction cancelAction = null, FaultAction faultAction = null) : base( completionAction, cancelAction, faultAction)
+            internal Slot(CompletionBuffer<T> container, T data, Slot previous, CompletionTask completionTask = null, CancellationTask cancellationTask = null, FaultTask faultTask = null)
             {
                 _container = container;
                 Data = data;
@@ -204,52 +215,39 @@ namespace Pipes.Types
 
                 if (previous != null)
                     previous.Next = this;
+
+                if( completionTask != null )
+                    AddCompletionTask(completionTask);
+
+                if( cancellationTask != null )
+                    AddCancallationTask(cancellationTask);
+
+                if( faultTask != null )
+                    AddFaultTask(faultTask);
             }
 
-
-            public override void Completed()
+            public override async Task Complete()
             {
-                Remove(base.Completed);
+                Remove(base.Complete().Wait);
+                await Target.EmptyTask;
             }
 
-            public override void Cancel(string reason)
+            public override async Task Cancel(string reason = null)
             {
-                Remove(() => base.Cancel(reason));
+                Remove(base.Cancel(reason).Wait);
+                await Target.EmptyTask;
             }
 
-            public override void Fault(Exception exception)
+            public override async Task Fault(Exception exception)
             {
-                Remove(() => base.Fault(exception));
+                Remove(base.Fault(exception).Wait);
+                await Target.EmptyTask;
             }
 
-            public override void Fault(string reason, Exception exception = null)
+            public override async Task Fault(string reason, Exception exception = null)
             {
-                Remove(() => base.Fault(reason,exception));
-            }
-
-
-            /// <summary>
-            /// Branching will create a new manifold that completes a dependant in this manifold 
-            /// when the new manifold is completed, cancelled, or faulted.
-            /// </summary>
-            /// <param name="completionAction"></param>
-            /// <param name="cancelAction"></param>
-            /// <param name="faultAction"></param>
-            /// <returns></returns>
-            public CompletionManifold Branch(CompletionAction completionAction = null, CancelAction cancelAction = null, FaultAction faultAction = null)
-            {
-                // Completion chains
-                if (completionAction == null)
-                    completionAction = Completed;
-
-                if (cancelAction == null)
-                    cancelAction = Cancel;
-
-                if (faultAction == null)
-                    faultAction = Fault;
-                
-                // Return new, chained completion manifold
-                return new CompletionManifold(completionAction, cancelAction, faultAction);
+                Remove(base.Fault(reason, exception).Wait);
+                await Target.EmptyTask;
             }
 
 

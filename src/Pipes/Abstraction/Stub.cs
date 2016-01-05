@@ -29,13 +29,13 @@ namespace Pipes.Abstraction
                 pipeline.AddTubes(_tubes);
         }
 
-        public IPipelineConnectorWithCompletion SendsMessagesTo(Stub<TContext> target)
+        public IPipelineConnectorAsync SendsMessagesTo(Stub<TContext> target)
         {
             return AddGenericConduit(target);
         }
 
 
-        public IPipelineMessageSingleTargetWithSubcontext<T,TContext> SendsMessage<T>() where T : class
+        public IPipelineMessageSingleTarget<TContext> SendsMessage<T>() where T : class
         {
             return AddTypedConduit<T>();
         }
@@ -45,28 +45,28 @@ namespace Pipes.Abstraction
             return new PrivateTube(this);
         }
 
-        public IPipelineConnector BroadcastsAllMessages()
+        public IPipelineConnectorAsync BroadcastsAllMessages()
         {
             var conduit = new Conduit<TContext>(this, null);
             _tubes.Add(conduit);
             return conduit;
         }
 
-        public IPipelineConnector BroadcastsAllMessagesPrivately()
+        public IPipelineConnectorAsync BroadcastsAllMessagesPrivately()
         {
             var conduit = new Conduit<TContext>(this, null) { IsPrivate = true };
             _tubes.Add(conduit);
             return conduit;
         }
 
-        private IPipelineConnectorWithCompletion AddGenericConduit(Stub<TContext> target, bool isPrivate = false)
+        private IPipelineConnectorAsync AddGenericConduit(Stub<TContext> target, bool isPrivate = false)
         {
             var conduit = new Conduit<TContext>(this, target) { IsPrivate = isPrivate };
             _tubes.Add(conduit);
             return conduit;
         }
 
-        private IPipelineMessageSingleTargetWithSubcontext<T,TContext> AddTypedConduit<T>(bool isPrivate = false) where T : class
+        private IPipelineMessageSingleTarget<TContext> AddTypedConduit<T>(bool isPrivate = false) where T : class
         {
             // Create partial conduit
             var conduit = new Conduit<TContext>.Partial<T>(this) { IsPrivate = isPrivate };
@@ -85,12 +85,12 @@ namespace Pipes.Abstraction
                 _stub = stub;
             }
 
-            public IPipelineConnector WhichSendsMessagesTo(Stub<TContext> target)
+            public IPipelineConnectorAsync WhichSendsMessagesTo(Stub<TContext> target)
             {
                 return _stub.AddGenericConduit(target, true);
             }
 
-            public IPipelineMessageSingleTargetWithSubcontext<T,TContext> WhichSendsMessage<T>() where T : class
+            public IPipelineMessageSingleTarget<TContext> WhichSendsMessage<T>() where T : class
             {
                 return _stub.AddTypedConduit<T>(true);
             }

@@ -8,24 +8,28 @@ using Pipes.Interfaces;
 
 namespace Pipes.Types
 {
-    public abstract class PipelineMessage<TContext> : IPipelineMessage<TContext>, IPipelineMessageInternals<TContext> where TContext : class, IOperationContext
+    public abstract class PipelineMessage<TContext> : IPipelineMessage<TContext> where TContext : class, IOperationContext
     {
         // ReSharper disable once MemberCanBeProtected.Global
         private readonly Pipeline<TContext> _pipeline;
 
-        public IPipelineComponent<TContext> Sender { get; private set; }
+        public IPipelineComponent<TContext> Sender { get; }
 
-        public IEnumerable<IPipelineMessage<TContext>> Stack { get; private set; }
+        public IEnumerable<IPipelineMessage<TContext>> Stack { get; }
 
-        public TContext Context { get; private set; }
+        public TContext Context { get; }
+
+        public object Meta { get; }
 
         public bool IsCancelled { get; set; }
+
         
-        protected PipelineMessage(Pipeline<TContext> pipeline, IPipelineComponent<TContext> sender, TContext context, IPipelineMessage<TContext> previous = null)
+        protected PipelineMessage(Pipeline<TContext> pipeline, IPipelineComponent<TContext> sender, TContext context, IPipelineMessage<TContext> previous = null, object meta = null)
         {
             _pipeline = pipeline;
             Sender = sender;
             Context = context;
+            Meta = meta;
             if (previous != null)
             {
                 // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
@@ -41,14 +45,19 @@ namespace Pipes.Types
 
         public IEnumerable<object> DataStack
         {
-            get { return Stack.Concat(new[] {this}).Cast<IPipelineMessage<object,TContext>>().Select( message => message.Data ); }
+            get { return FullStack.Cast<IPipelineMessage<object,TContext>>().Select( message => message.Data ); }
         }
 
-        public IPipelineMessage<TContext> Top
+        public IEnumerable<object> MetaStack
+        {
+            get { return FullStack.Cast<IPipelineMessage<object, TContext>>().Select(message => message.Meta); }
+        } 
+
+        public IEnumerable<IPipelineMessage<TContext>> FullStack
         {
             get
             {
-                return Stack.Concat(new[] { this }).First();
+                return Stack.Concat(new[] { this });
             }
         }
 
@@ -59,6 +68,7 @@ namespace Pipes.Types
         //    {
         //        context = Context;
         //    }
+        //
         //    _pipeline.EmitMessage(new PipelineMessage<TData, TContext>(_pipeline, Sender, data, context, this));
         //}
 
@@ -69,27 +79,27 @@ namespace Pipes.Types
         //    {
         //        context = Context;
         //    }
-            
+        //    
         //    return _pipeline.EmitMessageAsync(new PipelineMessage<TData, TContext>(_pipeline, Sender, data, context, this));
         //}
 
         [DebuggerHidden]
-        public void Chain<TData>(IPipelineComponent<TContext> origin, TData data, TContext subcontext = default(TContext)) where TData : class
+        public void Chain<TData>(IPipelineComponent<TContext> origin, TData data, object meta = null) where TData : class
         {
-            _pipeline.EmitMessage(new PipelineMessage<TData, TContext>(_pipeline, origin, data, subcontext ?? Context, this));
+            _pipeline.EmitMessage(new PipelineMessage<TData, TContext>(_pipeline, origin, data, Context, this, meta));
         }
 
         [DebuggerHidden]
-        public Task ChainAsync<TData>(IPipelineComponent<TContext> origin, TData data, TContext subcontext = default(TContext)) where TData : class
+        public Task ChainAsync<TData>(IPipelineComponent<TContext> origin, TData data, object meta = null) where TData : class
         {
-            return _pipeline.EmitMessageAsync(new PipelineMessage<TData, TContext>(_pipeline, origin, data, subcontext ?? Context, this));
+            return _pipeline.EmitMessageAsync(new PipelineMessage<TData, TContext>(_pipeline, origin, data, Context, this, meta));
         }
 
         public bool HandleException(Exception exception)
         {
             var pipelineException = new PipelineException<TContext>(_pipeline, this, exception);
 
-            return _pipeline.HandleException(pipelineException); ;
+            return _pipeline.HandleException(pipelineException);
         }
     }
 
@@ -98,11 +108,11 @@ namespace Pipes.Types
         where TData : class
         where TContext : class, IOperationContext
     {
-        internal PipelineMessage(Pipeline<TContext> pipeline, IPipelineComponent<TContext> sender, TData data, TContext context, IPipelineMessage<TContext> previous = null) : base( pipeline, sender, context, previous )
+        internal PipelineMessage(Pipeline<TContext> pipeline, IPipelineComponent<TContext> sender, TData data, TContext context, IPipelineMessage<TContext> previous = null, object meta = null) : base( pipeline, sender, context, previous )
         {
             Data = data;
         }
 
-        public TData Data { get; private set; }
+        public TData Data { get; }
     }
 }

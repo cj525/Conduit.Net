@@ -63,6 +63,8 @@
     <Compile Include="Components\MultiplyInt.cs" />
     <Compile Include="Components\ToString.cs" />
     <Compile Include="Program.cs" />
+    <Compile Include="Simple\StringValue.cs" />
+    <Compile Include="Simple\IntValue.cs" />
     <Compile Include="Simple\MathPipeTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Types\CompletionBufferTests.cs" />

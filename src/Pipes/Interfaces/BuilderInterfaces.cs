@@ -7,15 +7,15 @@ namespace Pipes.Interfaces
 
     public interface IPipelineBuilder<TContext> : IPipelineConstruction<TContext> where TContext : class, IOperationContext
     {
-        IPipelineInvocation<TContext> IsInvokedBy<TData>(ref Action<TData, TContext> trigger) where TData : class;
-        IPipelineInvocation<TContext> IsInvokedAsyncBy<TData>(ref Func<TData, TContext, Task> trigger) where TData : class;
+        IPipelineInvocation<TContext> IsInvokedBy<TData>(ref Action<TData> trigger) where TData : class;
+        IPipelineInvocation<TContext> IsInvokedBy<TData>(ref Action<TData, object> trigger) where TData : class;
+        IPipelineInvocation<TContext> IsInvokedAsyncBy<TData>(ref Func<TData, Task> trigger) where TData : class;
+        IPipelineInvocation<TContext> IsInvokedAsyncBy<TData>(ref Func<TData, object, Task> trigger) where TData : class;
     }
 
     public interface IPipelineConstruction<TContext> where TContext : class, IOperationContext
     {
         IPipelineConstructor<TContext> Constructs<TComponent>(Func<TComponent> ctor) where TComponent : IPipelineComponent<TContext>;
-
-        IPipelineConstructorMany<TContext> ConstructsMany(int count);
     }
 
     public interface IPipelineConstructor<TContext> where TContext : class, IOperationContext

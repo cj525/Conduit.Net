@@ -88,7 +88,7 @@ namespace Pipes.Example.Implementation
             Console.WriteLine($"Running pipeline for {EntryCount} stock ticks");
             var stamp = DateTime.UtcNow;
 
-            var pipeline = new StockStreamProcessor();
+            var pipeline = new StockStreamPipeline();
             pipeline.CreateMessageTap<PocoCommited>().WhichTriggers(EntryCommited);
             pipeline.Initialize();
 

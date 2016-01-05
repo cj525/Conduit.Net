@@ -10,18 +10,18 @@ using Pipes.Interfaces;
 
 namespace Pipes.Types
 {
-    public class OperationContext : CompletionSource, IOperationContext, IBranchableCompletionSource
+    public class OperationContext : CompletionSource, IOperationContext
     {
-        private readonly List<CompletionAction> _onComplete = new List<CompletionAction>();
-        private readonly List<CancelAction> _onCancelled = new List<CancelAction>();
-        private readonly List<FaultAction> _onFaulted = new List<FaultAction>();
+        private readonly List<CompletionTask> _onComplete = new List<CompletionTask>();
+        private readonly List<CancellationTask> _onCancelled = new List<CancellationTask>();
+        private readonly List<FaultTask> _onFaulted = new List<FaultTask>();
         private readonly Dictionary<Type, ICompletionSource> _completionSources =  new Dictionary<Type, ICompletionSource>();
 
         protected readonly Dictionary<Type, object> Adjuncts = new Dictionary<Type, object>();
 
         private int _messagesInFlight;
         private int _contextHolds;
-        private CompletionSource _completion;
+        //private CompletionSource _completion;
         
 
         public OperationContext()
@@ -29,67 +29,67 @@ namespace Pipes.Types
             //AssignActions(OnCompletion, OnCancel, OnFault);
         }
 
-        public void RegisterOnCompletion(CompletionAction completionAction)
+        public void RegisterOnCompletion(CompletionTask completionTask)
         {
-            _onComplete.Add(completionAction);
+            _onComplete.Add(completionTask);
         }
 
-        public void RegisterOnCancellation(CancelAction cancellationAction)
+        public void RegisterOnCancellation(CancellationTask cancellationAction)
         {
             _onCancelled.Add(cancellationAction);
         }
 
-        public void RegisterOnFault(FaultAction faultAction)
+        public void RegisterOnFault(FaultTask faultTask)
         {
-            _onFaulted.Add(faultAction);
+            _onFaulted.Add(faultTask);
         }
 
-        public override void Completed()
+        public override async Task Complete()
         {
             // Complete anything that can be completed
             RetrieveDerived<ICompletable>()?.Apply(adjunct => adjunct.Complete());
 
             // Trigger any registered callbacks
-            _onComplete.Apply(fn => fn());
+            _onComplete.ApplyAndWait(fn => fn());
 
             // Chain to base
-            base.Completed();
+            await base.Complete();
         }
 
-        public override void Cancel(string reason)
+        public override async Task Cancel(string reason)
         {
             // Cancel anything that can be cancelled
             RetrieveDerived<ICancellable>()?.Apply(adjunct => adjunct.Cancel(reason));
 
             // Trigger any registered callbacks
-            _onCancelled.Apply(fn => fn(reason));
+            _onCancelled.ApplyAndWait(fn => fn(reason));
 
             // Chain to base
-            base.Cancel(reason);
+            await base.Cancel(reason);
         }
 
-        public override void Fault(Exception exception)
+        public override async Task Fault(Exception exception)
         {
             // Fault anything that can be faulted
             RetrieveDerived<IFaultable>()?.Apply(adjunct => adjunct.Fault(exception));
 
             // Trigger any registered callbacks
-            _onFaulted.Apply(fn => fn(exception.Message, exception));
+            _onFaulted.ApplyAndWait(fn => fn(exception.Message, exception));
 
             // Chain to base
-            base.Fault(exception);
+            await base.Fault(exception);
         }
 
-        public override void Fault(string reason, Exception exception = null)
+        public override async Task Fault(string reason, Exception exception = null)
         {
             // Fault anything that can be faulted
             RetrieveDerived<IFaultable>()?.Apply(adjunct => adjunct.Fault(reason, exception));
 
             // Trigger any registered callbacks
-            _onFaulted.Apply(fn => fn(reason, exception));
+            _onFaulted.ApplyAndWait(fn => fn(reason, exception));
 
             // Chain to base
-            base.Fault(reason,exception);
+            await base.Fault(reason,exception);
         }
 
         /// <summary>
@@ -119,37 +119,11 @@ namespace Pipes.Types
                     return false;
                 }
 
-                var adjuncts = RetrieveDerived<ICompletable>().ToArray();
-                return adjuncts.All(c => c.IsCompleted);
+                return true;
             }
         }
 
-        /// <summary>
-        /// Returns true if a cancel occured in the context or any of the adjuncts
-        /// </summary>
-        public override bool IsCancelled
-        {
-            get
-            {
-                var adjuncts = RetrieveDerived<ICancellable>().ToArray();
-                return base.IsCancelled || adjuncts.Any(c => c.IsCancelled);
-            }
-        }
-
-        /// <summary>
-        /// Returns true if a fault occured in the context or any of the adjuncts
-        /// </summary>
-        public override bool IsFaulted
-        {
-            get
-            {
-                var adjuncts = RetrieveDerived<IFaultable>().ToArray();
-                return base.IsFaulted || adjuncts.Any(c => c.IsFaulted);
-            }
-        }
-
-
-        public CompletionBuffer<T> InitializeCompletionBuffer<T>(int concurrentLimit, CompletionAction completionAction = null, CancelAction cancelAction = null, FaultAction faultAction = null)
+        internal CompletionBuffer<T> InitializeCompletionBuffer<T>(int concurrentLimit, CompletionTask completionTask = null, CancellationTask cancellationTask = null, FaultTask faultTask = null)
         {
             var type = typeof (T);
             if( _completionSources.ContainsKey(type))
@@ -160,22 +134,22 @@ namespace Pipes.Types
             return buffer;
         }
 
-        public ICompletionSource<T> AddCompletionFor<T>(T data, CompletionAction completionAction = null, CancelAction cancelAction = null, FaultAction faultAction = null)
+        internal ICompletionSource AddCompletionFor<T>(T data, CompletionTask completionTask = null, CancellationTask cancellationTask = null, FaultTask faultTask = null)
         {
             var type = typeof(T);
             if (!_completionSources.ContainsKey(type))
                 throw new CompletionBufferNotInitializedException(GetType(), type);
 
             var completionSource =_completionSources[type];
-            var result = ((CompletionBuffer<T>) completionSource).Add(data, completionAction, cancelAction, faultAction);
+            var result = ((CompletionBuffer<T>) completionSource).AddItem(data, completionTask, cancellationTask, faultTask);
 
             return result;
         }
 
-        protected void InitializeSubcontext(OperationContext subcontext)
-        {
-            Adjuncts.Apply(kv => subcontext.Adjuncts.Add(kv.Key, kv.Value));
-        }
+        //protected void InitializeSubcontext(OperationContext subcontext)
+        //{
+        //    Adjuncts.Apply(kv => subcontext.Adjuncts.Add(kv.Key, kv.Value));
+        //}
 
 
 
@@ -221,14 +195,17 @@ namespace Pipes.Types
 
         public T Ensure<T>(Func<T> factory)
         {
-            var type = typeof(T);
-            if (Adjuncts.ContainsKey(type))
-                return (T) Adjuncts[type];
-            else
+            lock (Adjuncts)
             {
-                var result = factory();
-                Adjuncts.Add(type, result);
-                return result;
+                var type = typeof (T);
+                if (Adjuncts.ContainsKey(type))
+                    return (T) Adjuncts[type];
+                else
+                {
+                    var result = factory();
+                    Adjuncts.Add(type, result);
+                    return result;
+                }
             }
         }
 
@@ -283,12 +260,12 @@ namespace Pipes.Types
             RetrieveDerived<T>().Apply(operation);
         }
 
-        public void MessageInFlight()
+        public virtual void MessageInFlight()
         {
             Interlocked.Increment(ref _messagesInFlight);
         }
 
-        public void MessageCompleted()
+        public virtual void MessageCompleted()
         {
             Interlocked.Decrement(ref _messagesInFlight);
         }
@@ -297,16 +274,6 @@ namespace Pipes.Types
         {
             return new DisposableContextHold(this);
         }
-
-
-        public async Task WaitForIdle(int waitTimeSliceMs)
-        {
-            while (!IsCompleted && !IsCancelled && !IsFaulted)
-            {
-                await Task.Delay(waitTimeSliceMs);
-            }
-        }
-
 
         public void Dispose()
         {

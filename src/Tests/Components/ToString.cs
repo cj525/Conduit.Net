@@ -1,6 +1,7 @@
 ﻿using System;
 using Pipes.Abstraction;
 using Pipes.Interfaces;
+using Pipes.Tests.Simple;
 
 namespace Pipes.Tests.Components
 {
@@ -13,19 +14,19 @@ namespace Pipes.Tests.Components
             _format = format;
         }
 
-        protected override void Describe(IPipelineComponentBuilder thisComponent)
+        protected override void Describe(IPipelineComponentBuilder<IOperationContext> thisComponent)
         {
             thisComponent
                 .Receives<T>()
-                .WhichUnwrapsAndCalls(Format);
+                .WhichCalls(Format);
 
             thisComponent
-                .Emits<string>();
+                .Emits<StringValue>();
         }
 
-        private void Format(T value)
+        private void Format(IPipelineMessage<T, IOperationContext> message)
         {
-            Emit(String.Format(_format,value));
+            Emit( message, new StringValue { Value = String.Format(_format,message.Data) } );
         }
     }
 }

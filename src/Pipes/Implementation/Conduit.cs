@@ -12,11 +12,11 @@ using Pipes.Types;
 
 namespace Pipes.Implementation
 {
-    internal class Conduit<TContext> : IPipelineConnectorWithCompletion, IPipelineConnectorBuffered where TContext : class, IOperationContext
+    internal class Conduit<TContext> : IPipelineConnectorAsync, IPipelineConnectorAsyncBuffered where TContext : class, IOperationContext
     {
 
         public static int DefaultBufferLength = 1000;
-        private object _lockObject = new {};
+        private readonly object _lockObject = new {};
         private List<Conduit<TContext>> _manifold;
         private QueueThread _queueThread;
         private QueueThread[] _queueThreads;
@@ -27,9 +27,6 @@ namespace Pipes.Implementation
         internal Stub<TContext> Source { get; set; }
 
         internal Stub<TContext> Target { get; set; }
-
-        internal Func<IPipelineMessage<TContext>,TContext> ContextBrancher { get; set; }
-
 
         internal Type MessageType { get; set; }
 
@@ -55,7 +52,7 @@ namespace Pipes.Implementation
             WithWait = true;
         }
 
-        public IPipelineConnectorBuffered OnSeparateThread()
+        public IPipelineConnectorAsyncBuffered OnSeparateThread()
         {
             OffThread = true;
             return this;
@@ -72,12 +69,12 @@ namespace Pipes.Implementation
             QueueLength = queueLength;
         }
 
-        public IPipelineConnector WithCompletion(int maxConcurrency = 0)
-        {
-            MaxConcurrency = maxConcurrency;
-            NeedsCompletion = true;
-            return this;
-        }
+        //public IPipelineConnector WithCompletion(int maxConcurrency = 0)
+        //{
+        //    MaxConcurrency = maxConcurrency;
+        //    NeedsCompletion = true;
+        //    return this;
+        //}
 
         internal List<Conduit<TContext>> AsManifold()
         {
@@ -205,22 +202,15 @@ namespace Pipes.Implementation
             ShutdownThreads();
         }
 
-        internal class Partial<T> : Conduit<TContext>, IPipelineMessageSingleTargetWithSubcontext<T, TContext> where T : class
+        internal class Partial<T> : Conduit<TContext>, IPipelineMessageSingleTarget<TContext> where T : class
         {
             public Partial(Stub<TContext> source) : base(source, null, typeof(T))
             {
             }
 
-            public IPipelineConnectorWithCompletion To(Stub<TContext> target)
+            public IPipelineConnectorAsync To(Stub<TContext> target)
             {
                 Target = target;
-
-                return this;
-            }
-
-            public IPipelineMessageSingleTarget<TContext> WithSubcontext(Func<IPipelineMessage<T, TContext>, TContext> branchFn)
-            {
-                ContextBrancher = message => branchFn((IPipelineMessage<T,TContext>)message);
 
                 return this;
             }

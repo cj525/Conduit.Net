@@ -86,9 +86,9 @@ namespace Pipes.Tests.Types
         {
             var buffer = new CompletionBuffer<string>(3);
 
-            c1 = buffer.Add("Item 1");
-            c2 = buffer.Add("Item 2");
-            c3 = buffer.Add("Item 3");
+            c1 = buffer.AddItem("Item 1");
+            c2 = buffer.AddItem("Item 2");
+            c3 = buffer.AddItem("Item 3");
 
             return buffer;
         }
@@ -100,7 +100,7 @@ namespace Pipes.Tests.Types
             var t1 = Task.Run(() =>
             {
                 bool doCheck = buffer.IsFull;
-                r = buffer.Add("Item " + value);
+                r = buffer.AddItem("Item " + value);
 
                 if (buffer.Count > 3 )
                     Assert.Fail("Too many items");

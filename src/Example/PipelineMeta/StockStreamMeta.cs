@@ -5,9 +5,9 @@ using System.Text;
 using System.Threading.Tasks;
 using Pipes.Types;
 
-namespace Pipes.Example.PipelineContexts
+namespace Pipes.Example.PipelineMeta
 {
-    class StockStreamContext : OperationContext
+    class StockStreamMeta
     {
         public string Name { get; set; }
     }
