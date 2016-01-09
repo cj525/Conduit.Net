@@ -4,6 +4,7 @@ using NUnit.Framework;
 using Pipes.Abstraction;
 using Pipes.Interfaces;
 using Pipes.Tests.Components;
+using Pipes.Types;
 
 // ReSharper disable BuiltInTypeReferenceStyle
 namespace Pipes.Tests.Simple
@@ -18,7 +19,7 @@ namespace Pipes.Tests.Simple
         {
             var pipeline = new BasicServicePipe.Add2Times2Formatted {Add = 2, ThenMultiply = 3};
             pipeline.Initialize();
-            pipeline.Invoke(input);
+            pipeline.Invoke(new IntValue {Value = input});
             Assert.AreEqual(pipeline.Result, output);
         }
 
@@ -46,7 +47,7 @@ namespace Pipes.Tests.Simple
             {
                 public int Add;
                 public int ThenMultiply;
-                public Action<object> Invoke;
+                public Action<IntValue> Invoke;
 
                 public string Result { get; private set; }
 
@@ -57,7 +58,7 @@ namespace Pipes.Tests.Simple
                     base.Initialize();
                 }
 
-                protected override void Describe(IPipelineBuilder<IOperationContext> thisPipeline)
+                protected override void Describe(IPipelineBuilder<OperationContext> thisPipeline)
                 {
                     var addTwo = Component;
                     var timesTwo = Component;
@@ -72,7 +73,7 @@ namespace Pipes.Tests.Simple
                         .Into(ref timesTwo);
 
                     thisPipeline
-                        .Constructs(() => new ToString<object>(AnswerFormat))
+                        .Constructs(() => new ToString<IntValue>(AnswerFormat))
                         .Into(ref toString);
 
                     thisPipeline

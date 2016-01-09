@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Pipes.Exceptions;
 using Pipes.Extensions;
@@ -10,13 +11,15 @@ using Pipes.Types;
 
 namespace Pipes.Abstraction
 {
-    public abstract class PipelineComponent : PipelineComponent<IOperationContext> { }
+    public abstract class PipelineComponent : PipelineComponent<OperationContext> { }
 
-    public abstract class PipelineComponent<TContext> : IPipelineComponent<TContext> where TContext : class, IOperationContext
+    public abstract class PipelineComponent<TContext> : IPipelineComponent<TContext> where TContext : OperationContext
     {
         private readonly List<Action<Pipeline<TContext>>> _attachActions = new List<Action<Pipeline<TContext>>>();
 
         private Pipeline<TContext> _pipeline;
+
+        protected static Task NoOp => Target.EmptyTask;
 
         protected abstract void Describe(IPipelineComponentBuilder<TContext> thisComponent);
 
@@ -42,16 +45,18 @@ namespace Pipes.Abstraction
             message.Chain(this, data, meta);
         }
 
-        [DebuggerHidden]
-        protected Task EmitAsync<T>(IPipelineMessage<TContext> message, T data, TContext subcontext = default(TContext)) where T : class
+        //[DebuggerHidden]
+        //protected Task EmitAsync<T>(IPipelineMessage<TContext> message, T data, object meta = null) where T : class
+        //{
+        //    return message.ChainAsync(this, data, meta);
+        //}
+
+        public virtual void Dispose()
         {
-            return message.ChainAsync(this, data, subcontext);
+            
         }
 
-        protected void Terminate()
-        {
-            _pipeline.Terminate();
-        }
+
 
         protected async Task Loop<T>( TContext context, LoopState<T> loopState ) where T : class
         {
@@ -60,8 +65,10 @@ namespace Pipes.Abstraction
                 if (!await loopState.AdvanceAsync())
                     break;
 
-                await loopState.Yield();
+                loopState.Yield();
             }
+
+            await loopState.Complete();
         }
         
         protected abstract class LoopState<T> where T : class 
@@ -69,6 +76,8 @@ namespace Pipes.Abstraction
             // Implements IAsyncEnumerator but it's not officially BCL yet
             // and I am controlling visibility anyway, and since you can't
             // internally implement and interface, we'll forge ahead without
+
+            private long _concurrentYields;
 
             private readonly IPipelineMessage<TContext> _message;
             private readonly IPipelineComponent<TContext> _component;
@@ -83,37 +92,19 @@ namespace Pipes.Abstraction
 
             protected abstract T Current { get; }
 
-            internal virtual async Task Yield()
+            protected object Meta { get; set; }
+
+            internal virtual void Yield()
             {
-                try
-                {
-                    await _message.ChainAsync(_component, Current);
-                }
-                catch (Exception exception)
-                {
-                    // Give pipeline a chance to handle this
-                    if (!_message.HandleException(exception))
-                    {
-                        // Cancel the context (which will cancel the loop)
-                        await _message.Context.Fault(exception);
-                    }
-                }
-            }
-        }
-        protected abstract class ConcurrentLoopState<T> : LoopState<T> where T:class
-        {
-            protected ConcurrentLoopState(IPipelineComponent<TContext> component, IPipelineMessage<TContext> message) : base(component, message)
-            {
+                _message.Chain(_component, Current, Meta);
             }
 
-            /// <summary>
-            /// Because the base class already catches exceptions and faults the current context, this bit of craziness
-            /// works to trigger as many concurrent yield actions as possible, but only as fast as the loop state can keep
-            /// up, which makes it ideal for parsers where the current line's parsing may or may not depend on the previous line.
-            /// </summary>
-            internal new async void Yield()
+            internal async Task Complete()
             {
-                await base.Yield();
+                while (Interlocked.Read(ref _concurrentYields) > 0)
+                {
+                    await Task.Delay(1);
+                }
             }
         }
 
@@ -175,7 +166,6 @@ namespace Pipes.Abstraction
             private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
             private bool _emitComplete = true;
-            private bool _emitError = true;
 
             public Observer(PipelineComponent<TContext> component, IPipelineMessage<TContext> message, object aux)
             {
@@ -205,18 +195,8 @@ namespace Pipes.Abstraction
 
             public void OnError(Exception exception)
             {
-                if (!_emitError)
-                {
-                    if (!_message.HandleException(exception))
-                    {
-                        _disposables.Apply(item => item.Dispose());
-                        throw new OperationCanceledException("Unhandled observer exception", exception);
-                    }
-                }
-                else
-                    _component.Emit(_message, exception);
-
                 _disposables.Apply(item => item.Dispose());
+                _message.Context.HandleException(exception);
             }
 
             public void OnNext(TData value)
@@ -230,18 +210,9 @@ namespace Pipes.Abstraction
                 return this;
             }
 
-            public Observer<TData> DontEmitControlMessages()
+            public Observer<TData> DontEmitCompleteMessage()
             {
                 _emitComplete = false;
-                _emitError = false;
-
-                return this;
-            }
-
-            public Observer<TData> ConfigureEmits(bool onError = false, bool onComplete = false)
-            {
-                _emitComplete = onComplete;
-                _emitError = onError;
 
                 return this;
             }

@@ -2,10 +2,15 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Pipes.Abstraction;
+using Pipes.Types;
 
 namespace Pipes.Interfaces
 {
-    public interface IPipelineComponent<TContext> where TContext : class, IOperationContext
+    public interface IPipelineComponent : IDisposable
+    {
+        
+    }
+    public interface IPipelineComponent<TContext> : IPipelineComponent where TContext : OperationContext
     {
         void Build();
 
@@ -14,7 +19,13 @@ namespace Pipes.Interfaces
         void OnAttach(Action<Pipeline<TContext>> attachAction);
     }
 
-    public interface IPipelineMessage<TContext> where TContext : class, IOperationContext
+    public interface IPipelineConstructorStub<TContext> where TContext : OperationContext
+    {
+        IPipelineComponent<TContext> Construct();
+    }
+
+
+    public interface IPipelineMessage<TContext> where TContext : OperationContext
     {
         TContext Context { get; }
 
@@ -32,20 +43,28 @@ namespace Pipes.Interfaces
 
         void Chain<TData>(IPipelineComponent<TContext> origin, TData data, object meta = null) where TData : class;
 
-        Task ChainAsync<TData>(IPipelineComponent<TContext> origin, TData data, object meta = null) where TData : class;
-
-        bool HandleException(Exception exception);
+        //Task ChainAsync<TData>(IPipelineComponent<TContext> origin, TData data, object meta = null) where TData : class;
     }
 
-    public interface IPipelineMessage<out TData, TContext> : IPipelineMessage<TContext>
+    public interface IPipelineMessage<out TData, TContext> : IPipelineMessage<TContext>, IReadableData<TData>
         where TData : class
-        where TContext : class, IOperationContext
+        where TContext : OperationContext
+    {
+    }
+
+    public interface IReadableData<out TData> where TData : class
     {
         TData Data { get; }
     }
+
+    public interface IWritableData<in TData> where TData : class
+    {
+        TData Data { set; }
+    }
+
     public interface IPipelineMessageReceiver<out TData, TContext>
            where TData : class
-           where TContext : class, IOperationContext
+           where TContext : OperationContext
     {
         void WhichTriggers(Action action);
         void WhichUnwrapsAndCalls(Action<TData> action);
@@ -56,14 +75,14 @@ namespace Pipes.Interfaces
         void WhichCallsAsync(Func<IPipelineMessage<TData, TContext>, Task> asyncAction);
     }
 
-    public interface IPipelineMessageSingleTarget<TContext> where TContext : class, IOperationContext
+    public interface IPipelineMessageSingleTarget<TContext> where TContext : OperationContext
     {
-        IPipelineConnectorAsync To(Stub<TContext> target);
+        void To(Stub<TContext> target);
     }
 
     public interface IPipelineMessageTap<out TData, TContext>
         where TData : class
-        where TContext : class, IOperationContext
+        where TContext : OperationContext
     {
         IPipelineConnectorAsync WhichTriggers(Action action);
         IPipelineConnectorAsync WhichUnwrapsAndCalls(Action<TData> action);
@@ -76,37 +95,40 @@ namespace Pipes.Interfaces
 
 
 
-    public interface IPipelineConnectorBase<TContext> where TContext : class, IOperationContext
+    public interface IPipelineConnectorBase<TContext> where TContext : OperationContext
     {
-        IPipelineConnectorAsync SendsMessagesTo(Stub<TContext> target);
+        void SendsMessagesTo(Stub<TContext> target);
 
         IPipelineMessageSingleTarget<TContext> SendsMessage<TData>() where TData : class;
     }
 
-    public interface IPipelineConnector<TContext> : IPipelineConnectorBase<TContext> where TContext : class, IOperationContext
+    public interface IPipelineConnector<TContext> : IPipelineConnectorBase<TContext> where TContext : OperationContext
     {
         IPipelineMessageChain<TContext> HasPrivateChannel();
 
-        IPipelineConnectorAsync BroadcastsAllMessages();
+        void BroadcastsAllMessages();
 
-        IPipelineConnectorAsync BroadcastsAllMessagesPrivately();
+        void BroadcastsAllMessagesPrivately();
     }
 
     public interface IPipelineConnectorAsync
     {
-        IPipelineConnectorAsyncBuffered OnSeparateThread();
+        IPipelineConnectorOnSeparateThread OnSeparateThread();
 
+        IPipelineConnectorInParallel InParallel();
+    }
+
+    public interface IPipelineConnectorOnSeparateThread
+    {
         void InParallel();
     }
-
-    public interface IPipelineConnectorAsyncBuffered
+    public interface IPipelineConnectorInParallel
     {
-        void WithQueueLengthOf(int queueLength);
+        void OnSeparateThread();
     }
-
-    public interface IPipelineMessageChain<TContext> where TContext : class, IOperationContext
+    public interface IPipelineMessageChain<TContext> where TContext : OperationContext
     {
-        IPipelineConnectorAsync WhichSendsMessagesTo(Stub<TContext> target);
+        void WhichSendsMessagesTo(Stub<TContext> target);
 
         IPipelineMessageSingleTarget<TContext> WhichSendsMessage<T>() where T : class;
     }

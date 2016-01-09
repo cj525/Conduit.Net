@@ -6,14 +6,16 @@ using System.Threading.Tasks;
 using Pipes.Abstraction;
 using Pipes.Example.PipelineAdjuncts;
 using Pipes.Example.PipelineMessages;
+using Pipes.Example.PipelineMeta;
 using Pipes.Example.Schema;
 using Pipes.Interfaces;
+using Pipes.Types;
 
 namespace Pipes.Example.PipelineComponents
 {
     class PocoEmitter<T> : PipelineComponent where T : class, new()
     {
-        protected override void Describe(IPipelineComponentBuilder<IOperationContext> thisComponent)
+        protected override void Describe(IPipelineComponentBuilder<OperationContext> thisComponent)
         {
             thisComponent
                 .Receives<FieldedData>()
@@ -24,7 +26,7 @@ namespace Pipes.Example.PipelineComponents
 
         }
 
-        private async Task Inflate(IPipelineMessage<FieldedData, IOperationContext> message)
+        private async Task Inflate(IPipelineMessage<FieldedData, OperationContext> message)
         {
             // Localize
             var context = message.Context;
@@ -37,7 +39,7 @@ namespace Pipes.Example.PipelineComponents
             var poco = cache.Inflate(data.Keys, field => data[field]);
 
             // Drop poco in pipeline
-            await EmitAsync(message, poco);
+            Emit(message, poco);
         }
     }
 }

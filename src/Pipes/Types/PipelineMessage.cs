@@ -2,13 +2,14 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Pipes.Abstraction;
 using Pipes.Interfaces;
 
 namespace Pipes.Types
 {
-    public abstract class PipelineMessage<TContext> : IPipelineMessage<TContext> where TContext : class, IOperationContext
+    public abstract class PipelineMessage<TContext> : IPipelineMessage<TContext> where TContext : OperationContext
     {
         // ReSharper disable once MemberCanBeProtected.Global
         private readonly Pipeline<TContext> _pipeline;
@@ -23,7 +24,8 @@ namespace Pipes.Types
 
         public bool IsCancelled { get; set; }
 
-        
+        public Exception UnhandledException { get; internal set; }
+
         protected PipelineMessage(Pipeline<TContext> pipeline, IPipelineComponent<TContext> sender, TContext context, IPipelineMessage<TContext> previous = null, object meta = null)
         {
             _pipeline = pipeline;
@@ -43,23 +45,12 @@ namespace Pipes.Types
                 Stack = Enumerable.Empty<IPipelineMessage<TContext>>();
         }
 
-        public IEnumerable<object> DataStack
-        {
-            get { return FullStack.Cast<IPipelineMessage<object,TContext>>().Select( message => message.Data ); }
-        }
 
-        public IEnumerable<object> MetaStack
-        {
-            get { return FullStack.Cast<IPipelineMessage<object, TContext>>().Select(message => message.Meta); }
-        } 
+        public IEnumerable<object> DataStack => FullStack.Cast<IPipelineMessage<object,TContext>>().Select( message => message.Data );
 
-        public IEnumerable<IPipelineMessage<TContext>> FullStack
-        {
-            get
-            {
-                return Stack.Concat(new[] { this });
-            }
-        }
+        public IEnumerable<object> MetaStack => FullStack.Cast<IPipelineMessage<object, TContext>>().Select(message => message.Meta);
+
+        public IEnumerable<IPipelineMessage<TContext>> FullStack => Stack.Concat(new[] { this });
 
         //[DebuggerHidden]
         //public void Emit<TData>(TData data, TContext context = default(TContext)) where TData : class
@@ -89,26 +80,20 @@ namespace Pipes.Types
             _pipeline.EmitMessage(new PipelineMessage<TData, TContext>(_pipeline, origin, data, Context, this, meta));
         }
 
-        [DebuggerHidden]
-        public Task ChainAsync<TData>(IPipelineComponent<TContext> origin, TData data, object meta = null) where TData : class
-        {
-            return _pipeline.EmitMessageAsync(new PipelineMessage<TData, TContext>(_pipeline, origin, data, Context, this, meta));
-        }
+        //[DebuggerHidden]
+        //public Task ChainAsync<TData>(IPipelineComponent<TContext> origin, TData data, object meta = null) where TData : class
+        //{
+        //    return _pipeline.EmitMessageAsync(new PipelineMessage<TData, TContext>(_pipeline, origin, data, Context, this, meta));
+        //}
 
-        public bool HandleException(Exception exception)
-        {
-            var pipelineException = new PipelineException<TContext>(_pipeline, this, exception);
-
-            return _pipeline.HandleException(pipelineException);
-        }
     }
 
 
     public class PipelineMessage<TData, TContext> : PipelineMessage<TContext>, IPipelineMessage<TData, TContext>
         where TData : class
-        where TContext : class, IOperationContext
+        where TContext : OperationContext
     {
-        internal PipelineMessage(Pipeline<TContext> pipeline, IPipelineComponent<TContext> sender, TData data, TContext context, IPipelineMessage<TContext> previous = null, object meta = null) : base( pipeline, sender, context, previous )
+        internal PipelineMessage(Pipeline<TContext> pipeline, IPipelineComponent<TContext> sender, TData data, TContext context, IPipelineMessage<TContext> previous, object meta) : base( pipeline, sender, context, previous )
         {
             Data = data;
         }

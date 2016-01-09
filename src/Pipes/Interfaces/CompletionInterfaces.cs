@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Pipes.Abstraction;
 
@@ -50,6 +51,8 @@ namespace Pipes.Interfaces
     public interface ICancelledToken
     {
         bool IsCancelled { get; }
+
+
     }
 
     public interface ICompletedToken
@@ -65,7 +68,8 @@ namespace Pipes.Interfaces
 
     public interface ICompletionToken : ICompletedToken, ICancelledToken, IFaultedToken
     {
-        bool IsUnset { get; }
+        bool CompletionStateIsUnset { get; }
+        CancellationToken CancellationToken { get; }
     }
 
     public interface ICompletionEventRegistrar
@@ -73,7 +77,6 @@ namespace Pipes.Interfaces
         void AddCancallationTask(CancellationTask task);
         void AddCompletionTask(CompletionTask task);
         void AddFaultTask(FaultTask task);
-
     }
 
     /// <summary>
@@ -81,7 +84,7 @@ namespace Pipes.Interfaces
     /// </summary>
     public interface ICompletionSource : ICompletable, ICancellable, IFaultable
     {
-        Task WaitForCompletion(int? timeoutMs = null, int waitTimeSliceMs = 200);
+        Task WaitForCompletion();
     }
 
 

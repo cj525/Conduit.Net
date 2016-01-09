@@ -1,56 +1,75 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Pipes.Types;
+﻿//using System;
+//using System.Collections.Generic;
+//using System.Threading;
+//using System.Threading.Tasks;
+//using Pipes.Implementation;
+//using Pipes.Types;
 
-namespace Pipes.Interfaces
-{
+//namespace Pipes.Interfaces
+//{
 
-    // TODO: Rename to IPipelineContext
-    public interface IOperationContext : IDisposable, ICompletionSource, ICompletionToken
-    {
-        void AcquireContextHold();
+//    // TODO: Rename to IPipelineContext
+//    public interface OperationContextz : IDisposable, ICompletionSource, ICompletionToken
+//    {
+//        // Structure
 
-        OperationContext.DisposableContextHold AcquireDisposableContextHold();
+//        IPipelineComponent[] Components { get; }
 
-        void ReleaseContextHold();
+//        // Lifetime
 
-        void Close();
+//        void AcquireContextHold();
 
-        void MessageCompleted();
+//        OperationContext.DisposableContextHold AcquireDisposableContextHold();
 
-        void MessageInFlight();
+//        void ReleaseContextHold();
 
-        void RegisterOnCancellation(CancellationTask task);
+//        void Close();
 
-        void RegisterOnCompletion(CompletionTask task);
+//        void MessageCompleted();
 
-        void RegisterOnFault(FaultTask task);
+//        void MessageInFlight();
+
+//        // Completion
+
+//        void OnCancellation(CancellationTask task);
+
+//        void OnCompletion(CompletionTask task);
+
+//        void OnFault(FaultTask task);
+
+//        // Error handling
+
+//        void HandleException(Exception exception);
+
+//        bool HasUnhandledException { get; }
+
+//        Exception UnhandledException { get; }
+
+//        // Removable
+
+//        bool ContainsAdjunctAssignableTo<T>();
+
+//        bool ContainsAdjunctOfType<T>();
 
 
-        bool ContainsAdjunctAssignableTo<T>();
+//        void ApplyOptionalAdjunct<T>(Action<T> operation);
 
-        bool ContainsAdjunctOfType<T>();
+//        T Ensure<T>(Func<T> factory);
 
+//        T Remove<T>();
 
-        void ApplyOptionalAdjunct<T>(Action<T> operation);
+//        T Replace<T>(Func<T, T> func);
 
-        T Ensure<T>(Func<T> factory);
+//        T Retrieve<T>();
 
-        T Remove<T>();
+//        IEnumerable<T> RetrieveDerived<T>();
 
-        T Replace<T>(Func<T, T> func);
+//        T Store<T>() where T : class, new();
 
-        T Retrieve<T>();
-
-        IEnumerable<T> RetrieveDerived<T>();
-
-        T Store<T>() where T : class, new();
-
-        T Store<T>(T adjunct);
+//        T Store<T>(T adjunct);
 
         
-    }
+//    }
 
 
-}
+//}

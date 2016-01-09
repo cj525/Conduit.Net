@@ -2,6 +2,7 @@
 using Pipes.Abstraction;
 using Pipes.Interfaces;
 using Pipes.Tests.Simple;
+using Pipes.Types;
 
 namespace Pipes.Tests.Components
 {
@@ -14,7 +15,7 @@ namespace Pipes.Tests.Components
             _format = format;
         }
 
-        protected override void Describe(IPipelineComponentBuilder<IOperationContext> thisComponent)
+        protected override void Describe(IPipelineComponentBuilder<OperationContext> thisComponent)
         {
             thisComponent
                 .Receives<T>()
@@ -24,7 +25,7 @@ namespace Pipes.Tests.Components
                 .Emits<StringValue>();
         }
 
-        private void Format(IPipelineMessage<T, IOperationContext> message)
+        private void Format(IPipelineMessage<T, OperationContext> message)
         {
             Emit( message, new StringValue { Value = String.Format(_format,message.Data) } );
         }

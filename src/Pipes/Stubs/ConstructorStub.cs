@@ -1,12 +1,13 @@
 using System;
 using Pipes.Abstraction;
 using Pipes.Interfaces;
+using Pipes.Types;
 
 namespace Pipes.Stubs
 {
-    public class ConstructorStub<TComponent, TContext> : Stub<TContext>
+    public class ConstructorStub<TComponent, TContext> : Stub<TContext>, IPipelineConstructorStub<TContext>
         where TComponent : IPipelineComponent<TContext>
-        where TContext : class, IOperationContext
+        where TContext : OperationContext
     {
         private readonly Func<TComponent> _ctor;
 
@@ -22,6 +23,11 @@ namespace Pipes.Stubs
             pipeline.AttachComponent(instance);
 
             base.AttachTo(pipeline);
+        }
+
+        IPipelineComponent<TContext> IPipelineConstructorStub<TContext>.Construct()
+        {
+            return _ctor();
         }
     }
 }

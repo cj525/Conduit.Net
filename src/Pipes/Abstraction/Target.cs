@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Reflection;
+using System.Threading.Tasks;
 
 namespace Pipes.Abstraction
 {
@@ -9,6 +11,13 @@ namespace Pipes.Abstraction
 
         // ReSharper disable once StaticMemberInGenericType // This guy's relentless
         internal static readonly Task EmptyTask = Task.FromResult(EmptyTaskResult);
+        internal static FieldInfo EmptyTaskField = typeof (Target).GetField("EmptyTask", BindingFlags.NonPublic | BindingFlags.Static);
 
+        internal MethodInfo MethodInfo;
+        internal bool ReturnsTask;
+        internal bool IsUnwrapped;
+        internal bool IsTrigger;
+        //internal Type ParameterType;
+        internal object Instance;
     }
 }

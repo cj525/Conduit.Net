@@ -17,13 +17,13 @@ namespace Pipes.Example.Implementation
 {
     class EntryPoint
     {
-        const int EntryCount = 100000;
+        static int EntryCount = 10000;
         static int _entriesCommited;
 
 
         static void Main()
         {
-            RunApproaches().Wait();
+            new EntryPoint().RunApproaches().Wait();
 
             if (Debugger.IsAttached)
             {
@@ -32,49 +32,85 @@ namespace Pipes.Example.Implementation
             }
         }
 
-        static async Task RunApproaches()
+        async Task RunApproaches()
         {
             await PipelineApproach();
             await NonPipelineApproach();
         }
 
-        static async Task NonPipelineApproach()
+        async Task PipelineApproach()
         {
+            _entriesCommited = 0;
+            Console.WriteLine($"Running pipeline for {EntryCount} stock ticks");
+            var stamp = DateTime.UtcNow;
+
+            var pipeline = new StockStreamPipeline();
+            pipeline.CreateMessageTap<PocoCommited<StockTick>>().WhichTriggers(EntryCommited);
+            pipeline.Initialize();
+
+            await pipeline.ProcessStream("Stock Stream Test", new StockStream(EntryCount));
+
+            //Console.WriteLine("Completing...");
+
+            Console.WriteLine($"{PretendDb.Count<StockTick>()} stock ticks");
+
+            var time = DateTime.UtcNow - stamp;
+            Console.WriteLine($"Ran for {time.TotalMilliseconds} milliseconds");
+        }
+
+        static void EntryCommited()
+        {
+            var count = Interlocked.Increment(ref _entriesCommited);
+            if ( count % 1000 == 0)
+            {
+                Console.WriteLine($"{count} stock ticks commited");
+            }
+        }
+
+
+        async Task NonPipelineApproach()
+        {
+            EntryCount /= 100;
             Console.WriteLine($"Running non-pipeline for {EntryCount} stock ticks");
             var stamp = DateTime.UtcNow;
 
-            var stream = new StockTickGenerator(10);
+            var stream = new StockStream(EntryCount);
 
-            using (TextReader reader = new StreamReader(stream))
+            using (var enumerator = stream.GetEnumerator())
             {
                 // Locals
-                var delimiter = new [] {","};
+                var delimiter = new[] { "," };
                 var tickCache = new ReflectionCache<StockTick>();
-                var line = default(string);
                 _entriesCommited = 0;
 
-                // Line Parser
-                var headerData = await reader.ReadLineAsync();
-                var header = headerData.Split(delimiter, StringSplitOptions.None);
+                // Get header
+                enumerator.MoveNext();
+                var headers = enumerator.Current;
+                var header = headers[0].Split(delimiter, StringSplitOptions.None);
 
                 // Stream line reader
-                while ((line = await reader.ReadLineAsync()) != null )
+                while (enumerator.MoveNext())
                 {
-                    // Line Parser
-                    var parts = line.Split(delimiter, StringSplitOptions.None);
-                    var fields = new FieldedData(header, parts);
+                    var lines = enumerator.Current;
+                    foreach (var line in lines)
+                    {
+                        // Line Parser
+                        var parts = line.Split(delimiter, StringSplitOptions.None);
+                        var fields = new FieldedData(header, parts);
 
-                    // Poco Emitter
-                    var tick = tickCache.Inflate(header, field => fields[field]);
+                        // Poco Emitter
+                        var tick = tickCache.Inflate(header, field => fields[field]);
 
-                    // Poco Writer
-                    await PretendDb.StoreAsync(tick.Id, tick);
-                    EntryCommited();
+                        // Poco Writer
+                        await PretendDb.StoreAsync(tick.Id, tick);
+                        EntryCommited();
 
-                    // Stock Statistic Updater
-                    var stat = await PretendDb.RetrieveAsync<StockStatistic>(new StockStatistic {Symbol = tick.Symbol}.Id);
-                    StockStatisticUpdater.UpdateStatForStock(stat, tick);
-                    await PretendDb.StoreAsync(stat.Id, stat);
+                        // Stock Statistic Updater
+                        var prototype = new StockStatistic { Symbol = tick.Symbol };
+                        var stat = await PretendDb.RetrieveAsync(prototype.Id, () => prototype);
+                        StockStatisticUpdater.UpdateStatForStock(stat, tick);
+                        await PretendDb.StoreAsync(stat.Id, stat);
+                    }
                 }
             }
 
@@ -82,29 +118,5 @@ namespace Pipes.Example.Implementation
             Console.WriteLine($"Ran for {time.TotalMilliseconds} milliseconds");
         }
 
-        static async Task PipelineApproach()
-        {
-            _entriesCommited = 0;
-            Console.WriteLine($"Running pipeline for {EntryCount} stock ticks");
-            var stamp = DateTime.UtcNow;
-
-            var pipeline = new StockStreamPipeline();
-            pipeline.CreateMessageTap<PocoCommited>().WhichTriggers(EntryCommited);
-            pipeline.Initialize();
-
-            await pipeline.ProcessStream("Stock Stream Test", new StockTickGenerator(EntryCount));
-
-            var time = DateTime.UtcNow - stamp;
-            Console.WriteLine($"Ran for {time.TotalMilliseconds} milliseconds");
-        }
-
-        private static void EntryCommited()
-        {
-            var count = Interlocked.Increment(ref _entriesCommited);
-            if ( count % 10000 == 0)
-            {
-                Console.WriteLine($"{count} stock ticks commited");
-            }
-        }
     }
 }

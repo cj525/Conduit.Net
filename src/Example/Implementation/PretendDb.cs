@@ -9,9 +9,9 @@ namespace Pipes.Example.Implementation
 {
     class PretendDb
     {
-        public static int WriteDelayMs = 15;
         public static int ReadDelayMs = 10;
-        public static int ScanDelayMs = 75;
+        public static int WriteDelayMs = 30;
+        public static int ScanDelayMs = 50;
 
         private static readonly Dictionary<Type,Dictionary<long, object>> Storage = new Dictionary<Type, Dictionary<long, object>>();
         private static readonly object Mutex = new { };
@@ -43,7 +43,7 @@ namespace Pipes.Example.Implementation
             await Task.Delay(WriteDelayMs);
         }
 
-        public static async Task<T> RetrieveAsync<T>(long id) where T: class, new()
+        public static async Task<T> RetrieveAsync<T>(long id, Func<T> defaultValue) where T: class, new()
         {
             var result = default(T);
             var type = typeof(T);
@@ -51,7 +51,7 @@ namespace Pipes.Example.Implementation
             {
                 if (!Storage.ContainsKey(type))
                 {
-                    return new T();
+                    return defaultValue();
                 }
             }
             var bucket = Storage[type];
@@ -60,6 +60,10 @@ namespace Pipes.Example.Implementation
                 if (bucket.ContainsKey(id))
                 {
                     result = (T)bucket[id];
+                }
+                else
+                {
+                    result = defaultValue();
                 }
             }
 
@@ -126,6 +130,20 @@ namespace Pipes.Example.Implementation
             return results;
         }
 
+        public static int Count<T>()
+        {
+            var type = typeof(T);
+            lock (Mutex)
+            {
+                if (!Storage.ContainsKey(type))
+                {
+                    return 0;
+                }
+            }
+            var bucket = Storage[type];
+
+            return bucket.Count;
+        }
         public static void Clear()
         {
             lock (Mutex)

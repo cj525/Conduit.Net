@@ -1,8 +1,9 @@
 using Pipes.Interfaces;
+using Pipes.Types;
 
 namespace Pipes.Abstraction
 {
-    public abstract class BuildingBlock<TContext> where TContext : class, IOperationContext
+    public abstract class BuildingBlock<TContext> where TContext : OperationContext
     {
         protected readonly IPipelineComponent<TContext> Component;
 

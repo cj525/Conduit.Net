@@ -9,32 +9,34 @@ using Pipes.Example.PipelineMessages;
 using Pipes.Example.Schema;
 using Pipes.Example.Schema.Abstraction;
 using Pipes.Interfaces;
+using Pipes.Types;
 
 namespace Pipes.Example.PipelineComponents
 {
     class StockStatisticUpdater : PipelineComponent
     {
-        protected override void Describe(IPipelineComponentBuilder<IOperationContext> thisComponent)
+        protected override void Describe(IPipelineComponentBuilder<OperationContext> thisComponent)
         {
             thisComponent
                 .Receives<PocoCommited<StockTick>>()
                 .WhichCallsAsync(UpdateStock);
         }
 
-        private async Task UpdateStock(IPipelineMessage<PocoCommited<StockTick>, IOperationContext> message)
+        private async Task UpdateStock(IPipelineMessage<PocoCommited<StockTick>, OperationContext> message)
         {
             var context = message.Context;
             var data = message.Data;
 
-            var stockTick = await PretendDb.RetrieveAsync<StockTick>(data.Id);
+            var stockTick = await PretendDb.RetrieveAsync(data.Id, ()=>new StockTick());
 
             if (stockTick.Value == 0)
             {
-                await context.Cancel("Change was zero");
+                //await context.Cancel("Change was zero");
             }
             else
             {
-                var stat = await PretendDb.RetrieveAsync<StockStatistic>(new StockStatistic { Symbol = stockTick.Symbol }.Id);
+                var prototype = new StockStatistic {Symbol = stockTick.Symbol};
+                var stat = await PretendDb.RetrieveAsync(prototype.Id, () => prototype);
 
                 UpdateStatForStock(stat, stockTick);
 
@@ -52,6 +54,8 @@ namespace Pipes.Example.PipelineComponents
 
             if (!stat.Low.HasValue || newValue < stat.Low)
                 stat.Low = newValue;
+
+            stat.CurrentValue = newValue;
         }
     }
 }

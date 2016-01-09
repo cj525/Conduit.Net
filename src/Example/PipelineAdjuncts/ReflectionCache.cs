@@ -37,7 +37,7 @@ namespace Pipes.Example.PipelineAdjuncts
             {
                 var value = deserializeField(field);
                 var type = _fieldTypes[field];
-                var typedValue = JsonConvert.DeserializeObject(value, type);
+                var typedValue = type == typeof(string) ? value : JsonConvert.DeserializeObject(value, type);
                 _setters[field](result, typedValue);
             }
 

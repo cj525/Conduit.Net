@@ -6,24 +6,26 @@ using System.Threading.Tasks;
 using Pipes.Abstraction;
 using Pipes.Example.Implementation;
 using Pipes.Example.PipelineMessages;
+using Pipes.Example.PipelineMeta;
 using Pipes.Example.Schema.Abstraction;
 using Pipes.Interfaces;
+using Pipes.Types;
 
 namespace Pipes.Example.PipelineComponents
 {
     class PocoWriter<T> : PipelineComponent where T : PocoWithId
     {
-        protected override void Describe(IPipelineComponentBuilder<IOperationContext> thisComponent)
+        protected override void Describe(IPipelineComponentBuilder<OperationContext> thisComponent)
         {
             thisComponent
                 .Receives<T>()
                 .WhichCallsAsync(Commit);
 
             thisComponent
-                .Emits<PocoCommited>();
+                .Emits<PocoCommited<T>>();
         }
 
-        private async Task Commit(IPipelineMessage<T, IOperationContext> message)
+        private async Task Commit(IPipelineMessage<T, OperationContext> message)
         {
             // Localize
             var context = message.Context;
@@ -33,7 +35,7 @@ namespace Pipes.Example.PipelineComponents
             await PretendDb.StoreAsync(data.Id, data);
 
             // Emit indicator that the poco is commited
-            await EmitAsync(message, new PocoCommited<T>(data));
+            Emit(message, new PocoCommited<T>(data), new PocoWithIdMeta { StockId = data.Id, Type = typeof(T) } );
         }
     }
 }

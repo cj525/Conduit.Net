@@ -2,10 +2,11 @@ using System;
 using System.Threading.Tasks;
 using Pipes.Abstraction;
 using Pipes.Interfaces;
+using Pipes.Types;
 
 namespace Pipes.Stubs
 {
-    public class TransmitterStub<TContext> : Stub<TContext> where TContext : class, IOperationContext
+    public class TransmitterStub<TContext> : Stub<TContext> where TContext : OperationContext
     {
         protected TransmitterStub(IPipelineComponent<TContext> component, Type containedType) : base(component,containedType)
         {
@@ -14,16 +15,10 @@ namespace Pipes.Stubs
 
     public class TransmitterStub<TComponent, TContext> : TransmitterStub<TContext>
         where TComponent : class
-        where TContext : class, IOperationContext
+        where TContext : OperationContext
     {
-        public TransmitterStub(IPipelineComponent<TContext> component): base(component, typeof(TComponent))
+        public TransmitterStub(IPipelineComponent<TContext> component, Type containedType): base(component, containedType)
         {
         }
-
-
-        //public async Task Emit(TComponent data, TContext context)
-        //{
-        //    await Pipeline.EmitAsync(Component, data, context);
-        //}
     }
 }

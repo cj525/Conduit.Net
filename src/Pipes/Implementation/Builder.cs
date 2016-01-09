@@ -3,10 +3,11 @@ using System.Threading.Tasks;
 using Pipes.Abstraction;
 using Pipes.BuildingBlocks;
 using Pipes.Interfaces;
+using Pipes.Types;
 
 namespace Pipes.Implementation
 {
-    internal class Builder<TContext> : IPipelineBuilder<TContext>, IPipelineComponentBuilder<TContext> where TContext : class, IOperationContext
+    internal class Builder<TContext> : IPipelineBuilder<TContext>, IPipelineComponentBuilder<TContext> where TContext : OperationContext
     {
         private readonly IPipelineComponent<TContext> _component;
         private readonly Pipeline<TContext> _pipeline;

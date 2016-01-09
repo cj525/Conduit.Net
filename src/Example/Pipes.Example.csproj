@@ -50,7 +50,6 @@
     <Compile Include="Extensions\DateTimeExtensions.cs" />
     <Compile Include="Implementation\EntryPoint.cs" />
     <Compile Include="Implementation\PretendDb.cs" />
-    <Compile Include="Implementation\StockTickGenerator.cs" />
     <Compile Include="Implementation\StockStream.cs" />
     <Compile Include="PipelineAdjuncts\ReflectionCache.cs" />
     <Compile Include="PipelineComponents\StockStatisticUpdater.cs" />
@@ -63,11 +62,11 @@
     <Compile Include="Schema\StockStatistic.cs" />
     <Compile Include="Schema\StockTick.cs" />
     <Compile Include="PipelineMessages\StreamLine.cs" />
-    <Compile Include="PipelineAdjuncts\ParserConfig.cs" />
+    <Compile Include="PipelineAdjuncts\LineParserConfig.cs" />
     <Compile Include="PipelineComponents\LineParser.cs" />
     <Compile Include="PipelineComponents\PocoEmitter.cs" />
     <Compile Include="PipelineComponents\PocoWriter.cs" />
-    <Compile Include="PipelineComponents\StreamLineReader.cs" />
+    <Compile Include="PipelineComponents\StockStreamReader.cs" />
     <Compile Include="PipelineMeta\StockStreamMeta.cs" />
     <Compile Include="Pipelines\StockStreamPipeline.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

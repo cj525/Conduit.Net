@@ -10,9 +10,9 @@ namespace Pipes.Example.Schema
 {
     class StockTick : PocoWithId
     {
-        public override long Id => ((Symbol ?? "") + Timestamp.ToEpoch()).GetHashCode();
+        public override long Id => Timestamp;
 
-        public DateTime Timestamp { get; set; }
+        public long Timestamp { get; set; }
 
         public string Symbol { get; set; }
 

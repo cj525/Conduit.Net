@@ -5,12 +5,16 @@ using Pipes.Exceptions;
 using Pipes.Implementation;
 using Pipes.Interfaces;
 using Pipes.Stubs;
+using Pipes.Types;
 
 namespace Pipes.BuildingBlocks
 {
+    /// <summary>
+    /// Records the fact that this class can receive data castable to TData, and where to land said call
+    /// </summary>
     internal class Receiver<TData, TContext> : BuildingBlock<TContext>, IPipelineMessageReceiver<TData, TContext>
         where TData : class
-        where TContext : class, IOperationContext
+        where TContext : OperationContext
     {
         private readonly ReceiverStub<TData,TContext> _receiver;
         private readonly MessageTarget<TData,TContext> _messageTarget;

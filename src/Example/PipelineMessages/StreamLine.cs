@@ -8,7 +8,7 @@ namespace Pipes.Example.PipelineMessages
 {
     class StreamLine
     {
-        public string Data { get; set; }
+        public string[] Entries { get; set; }
         public int LineNumber { get; set; }
     }
 }

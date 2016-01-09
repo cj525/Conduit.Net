@@ -1,6 +1,7 @@
 ﻿using Pipes.Abstraction;
 using Pipes.Interfaces;
 using Pipes.Tests.Simple;
+using Pipes.Types;
 
 namespace Pipes.Tests.Components
 {
@@ -8,7 +9,7 @@ namespace Pipes.Tests.Components
     {
         public int Value { get; set; }
 
-        protected override void Describe(IPipelineComponentBuilder<IOperationContext> thisComponent)
+        protected override void Describe(IPipelineComponentBuilder<OperationContext> thisComponent)
         {
             thisComponent
                 .Receives<IntValue>()
@@ -18,7 +19,7 @@ namespace Pipes.Tests.Components
                 .Emits<IntValue>();
         }
 
-        private void MultiplyTimesTwo(IPipelineMessage<IntValue, IOperationContext> message)
+        private void MultiplyTimesTwo(IPipelineMessage<IntValue, OperationContext> message)
         {
             Emit(message, new IntValue {Value = message.Data.Value*Value});
         }

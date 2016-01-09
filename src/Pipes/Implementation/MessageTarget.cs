@@ -1,62 +1,67 @@
 ﻿using System;
+using System.Data.SqlTypes;
+using System.Reflection;
 using System.Threading.Tasks;
 using Pipes.Abstraction;
 using Pipes.Interfaces;
 using Pipes.Stubs;
+using Pipes.Types;
 
 namespace Pipes.Implementation
 {
     internal class MessageTarget<TData, TContext> : Target
         where TData : class
-        where TContext : class, IOperationContext
+        where TContext : OperationContext
     {
-        private Func<IPipelineMessage<TData, TContext>, Task> _bridge;
+        //private Func<IPipelineMessage<TData, TContext>, Task> _bridge;
 
         internal void Attach(ReceiverStub<TData, TContext> rx)
         {
-            rx.Calls(_bridge);
+            rx.Target = this;
+            //ParameterType = typeof(TData);
         }
 
         internal void Set(Action action)
         {
-            _bridge = msg =>
-            {
-                action();
-                return EmptyTask;
-            };
+            MethodInfo = action.Method;
+            Instance = action.Target;
+            IsTrigger = true;
         }
 
         internal void Set(Action<TData> action)
         {
-            _bridge = msg =>
-            {
-                action(msg.Data);
-                return EmptyTask;
-            };
+            MethodInfo = action.Method;
+            Instance = action.Target;
+            IsUnwrapped = true;
         }
 
         internal void Set(Action<IPipelineMessage<TData, TContext>> action)
         {
-            _bridge = msg =>
-            {
-                action(msg);
-                return EmptyTask;
-            };
+            MethodInfo = action.Method;
+            Instance = action.Target;
         }
 
         internal void Set(Func<Task> asyncAction)
         {
-            _bridge = msg => asyncAction();
+            MethodInfo = asyncAction.Method;
+            Instance = asyncAction.Target;
+            IsTrigger = true;
+            ReturnsTask = true;
         }
 
         internal void Set(Func<TData, Task> asyncAction)
         {
-            _bridge = msg => asyncAction(msg.Data);
+            MethodInfo = asyncAction.Method;
+            Instance = asyncAction.Target;
+            IsUnwrapped = true;
+            ReturnsTask = true;
         }
 
         internal void Set(Func<IPipelineMessage<TData, TContext>, Task> asyncAction)
         {
-            _bridge = asyncAction;
+            Instance = asyncAction.Target;
+            MethodInfo = asyncAction.Method;
+            ReturnsTask = true;
         }
     }
 

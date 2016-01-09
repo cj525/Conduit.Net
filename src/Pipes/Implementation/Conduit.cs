@@ -1,220 +1,68 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Threading;
+using System.Reflection;
+using System.Reflection.Emit;
 using System.Threading.Tasks;
 using Pipes.Abstraction;
-using Pipes.Exceptions;
+using Pipes.Extensions;
 using Pipes.Interfaces;
 using Pipes.Stubs;
 using Pipes.Types;
 
 namespace Pipes.Implementation
 {
-    internal class Conduit<TContext> : IPipelineConnectorAsync, IPipelineConnectorAsyncBuffered where TContext : class, IOperationContext
+    internal class Conduit<TContext> where TContext : OperationContext
     {
+        private readonly Pipeline<TContext> _pipeline;
+        private readonly Thunk[] _thunks;
 
-        public static int DefaultBufferLength = 1000;
-        private readonly object _lockObject = new {};
-        private List<Conduit<TContext>> _manifold;
-        private QueueThread _queueThread;
-        private QueueThread[] _queueThreads;
-        private int _poolPtr;
-
-        internal ReceiverStub<TContext> Receiver;
-
-        internal Stub<TContext> Source { get; set; }
-
-        internal Stub<TContext> Target { get; set; }
-
-        internal Type MessageType { get; set; }
-
-        internal bool IsPrivate { get; set; }
-
-        internal bool OffThread { get; set; }
-
-        internal bool WithWait { get; set; }
-        
-        internal bool Pooled { get; set; }
-
-        internal int QueueLength { get; set; }
-
-        internal bool NeedsCompletion { get; set; }
-        internal int MaxConcurrency { get; set; }
-
-        public Conduit(Stub<TContext> source, Stub<TContext> target, Type messageType = default(Type))
+        public Conduit(Pipeline<TContext> pipeline, IEnumerable<Thunk> thunks )
         {
-            Target = target;
-            Source = source;
-            MessageType = messageType;
-            QueueLength = DefaultBufferLength;
-            WithWait = true;
+            _pipeline = pipeline;
+            _thunks = thunks.ToArray();
         }
 
-        public IPipelineConnectorAsyncBuffered OnSeparateThread()
+        public async void Transport<TData>(IPipelineMessage<TData, TContext> message) where TData : class
         {
-            OffThread = true;
-            return this;
-        }
-
-        public void InParallel()
-        {
-            OffThread = true;
-            Pooled = true;
-        }
-
-        public void WithQueueLengthOf(int queueLength)
-        {
-            QueueLength = queueLength;
-        }
-
-        //public IPipelineConnector WithCompletion(int maxConcurrency = 0)
-        //{
-        //    MaxConcurrency = maxConcurrency;
-        //    NeedsCompletion = true;
-        //    return this;
-        //}
-
-        internal List<Conduit<TContext>> AsManifold()
-        {
-            if (_manifold == null)
+            try
             {
-                _manifold = new List<Conduit<TContext>>();
-            }
-            return _manifold;
-        }
-
-        [DebuggerHidden]
-        internal Task Invoke(IPipelineMessage<TContext> message)
-        {
-            if (!OffThread)
-            {
-                if (Receiver != null)
+                // Locals
+                var context = message.Context;
+                var thunks = default(Thunk[]);
+                // Cache targeted version of thunk
+                if (!context.Thunks.ContainsKey(this))
                 {
-                    return Receiver.Receive(message);
-                }
-
-                if (_manifold != null)
-                {
-                    var target = _manifold[NextPtr()];
-                    return target.Invoke(message);
-                }
-
-                if (Receiver == null && _manifold == null)
-                    throw new NotAttachedException("Conduit is not attached.");
-            }
-            else if (!Pooled)
-            {
-                if (_queueThread == null)
-                {
-                    lock (_lockObject)
+                    lock (this)
                     {
-                        if (_queueThread == null)
-                            _queueThread = new QueueThread(Target.ContainedType.Name);
-                    }
-                }
-                // == true for mono bug
-                _queueThread.Enqueue(() => Receiver.Receive(message));
-
-                // Double-check pattern does work, check Lazy<T> if you don't believe me
-                if (!_queueThread.WasStarted)
-                {
-                    lock (_lockObject)
-                    {
-                        if (!_queueThread.WasStarted)
+                        if (!context.Thunks.ContainsKey(this))
                         {
-                            _queueThread.MaxQueueLength = QueueLength;
-                            _queueThread.Start();
+                            thunks = _thunks.Select(thunk => thunk.AttachTo<TData,TContext>(context.Components)).ToArray();
+                            context.Thunks.Add( this, thunks);
+                        }
+                        else
+                        {
+                            thunks = context.Thunks[this];
                         }
                     }
-                }
-            }
-            else
-            {
-                if (_manifold == null)
-                {
-                    ThreadPool.QueueUserWorkItem(state => Receiver.Receive(message).Wait());
                 }
                 else
                 {
-                    var count = _manifold.Count;
-                    // Double-check pattern does work, check Lazy<T> if you don't believe me
-                    if( _queueThreads == null )
-                    {
-                        lock( _manifold )
-                        {
-                            if( _queueThreads == null )
-                            {
-                                _queueThreads = Enumerable.Range( 0, count ).Select( index => new QueueThread( String.Format( "{0} {1}/{2}", Target.ContainedType.Name, index, count ) ) ).ToArray();
-                            }
-                        }
-                    }
-
-                    lock (_queueThreads)
-                    {
-                        var ptr = NextPtr();
-                        var thread = _queueThreads[ptr];
-                        var target = _manifold[ptr];
-                            
-                        thread.Enqueue(() => target.Invoke(message));
-                    }
+                    thunks = context.Thunks[this];
                 }
+
+                await Task.WhenAll(thunks.Select(thunk => ((Thunk<TContext>)thunk).Invoke(message)));
             }
-
-            return Abstraction.Target.EmptyTask;
-        }
-
-        private int NextPtr()
-        {
-            lock (_manifold)
+            catch (Exception exception)
             {
-                var result = _poolPtr;
-                if (++_poolPtr == _manifold.Count)
-                    _poolPtr = 0;
-                return result;
+                // Wrap exception with message (containing context) due to task not being available here (on purpose)
+                var pipelineException = new PipelineException<TContext>(_pipeline, message, exception);
+
+                // Handle the exception
+                _pipeline.HandleException(pipelineException);
             }
         }
 
-        internal Conduit<TContext> Clone(ReceiverStub<TContext> rx)
-        {
-            return new Conduit<TContext>(Source, Target, MessageType)
-            {
-                IsPrivate = IsPrivate,
-                MessageType = MessageType,
-                OffThread = OffThread,
-                Pooled = Pooled,
-                QueueLength = QueueLength,
-                Receiver = rx,
-                WithWait = WithWait,
-            };
-        }
-
-        internal void ShutdownThreads()
-        {
-            _queueThread?.WaitForEmpty();
-
-            _queueThread = null;
-        }
-
-        public void Dispose()
-        {
-            ShutdownThreads();
-        }
-
-        internal class Partial<T> : Conduit<TContext>, IPipelineMessageSingleTarget<TContext> where T : class
-        {
-            public Partial(Stub<TContext> source) : base(source, null, typeof(T))
-            {
-            }
-
-            public IPipelineConnectorAsync To(Stub<TContext> target)
-            {
-                Target = target;
-
-                return this;
-            }
-        }
 
     }
 }

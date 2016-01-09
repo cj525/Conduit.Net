@@ -6,10 +6,12 @@ using System.Threading.Tasks;
 
 namespace Pipes.Example.PipelineAdjuncts
 {
-    class ParserConfig
+    class LineParserConfig
     {
         public string[] Delimiters { get; set; }
-        public bool HaveHeader { get; set; }
+
+        public bool HaveHeader => Header != null;
+
         public string[] Header { get; set; }
     }
 }

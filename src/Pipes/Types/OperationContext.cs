@@ -6,11 +6,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Pipes.Abstraction;
 using Pipes.Extensions;
+using Pipes.Implementation;
 using Pipes.Interfaces;
 
 namespace Pipes.Types
 {
-    public class OperationContext : CompletionSource, IOperationContext
+    public class OperationContext : CompletionSource, IDisposable
     {
         private readonly List<CompletionTask> _onComplete = new List<CompletionTask>();
         private readonly List<CancellationTask> _onCancelled = new List<CancellationTask>();
@@ -18,31 +19,55 @@ namespace Pipes.Types
         private readonly Dictionary<Type, ICompletionSource> _completionSources =  new Dictionary<Type, ICompletionSource>();
 
         protected readonly Dictionary<Type, object> Adjuncts = new Dictionary<Type, object>();
+        internal Dictionary<object, Thunk[]> Thunks = new Dictionary<object, Thunk[]>();
 
         private int _messagesInFlight;
         private int _contextHolds;
-        //private CompletionSource _completion;
-        
-
-        public OperationContext()
+        public object[] Components { get; internal set; }
+        public OperationContext(  )
         {
             //AssignActions(OnCompletion, OnCancel, OnFault);
         }
 
-        public void RegisterOnCompletion(CompletionTask completionTask)
+        internal void SetComponents(IEnumerable<object> components)
+        {
+            Components = components.ToArray();
+        }
+
+        public void OnCompletion(CompletionTask completionTask)
         {
             _onComplete.Add(completionTask);
         }
 
-        public void RegisterOnCancellation(CancellationTask cancellationAction)
+        public void OnCancellation(CancellationTask cancellationAction)
         {
             _onCancelled.Add(cancellationAction);
         }
 
-        public void RegisterOnFault(FaultTask faultTask)
+        public void OnFault(FaultTask faultTask)
         {
             _onFaulted.Add(faultTask);
         }
+
+
+        public virtual void HandleException(Exception exception)
+        {
+            if (exception is OperationCanceledException)
+            {
+                Cancel(exception.Message).Wait();
+            }
+            else
+            {
+                UnhandledException = exception;
+                HasUnhandledException = true;
+                Fault(exception).Wait();
+            }
+        }
+
+        public bool HasUnhandledException { get; protected set; }
+
+        public Exception UnhandledException { get; protected set; }
+
 
         public override async Task Complete()
         {
@@ -50,46 +75,44 @@ namespace Pipes.Types
             RetrieveDerived<ICompletable>()?.Apply(adjunct => adjunct.Complete());
 
             // Trigger any registered callbacks
+            _onComplete.Reverse();
             _onComplete.ApplyAndWait(fn => fn());
 
             // Chain to base
             await base.Complete();
         }
 
-        public override async Task Cancel(string reason)
+        public override async Task Cancel(string reason = null)
         {
-            // Cancel anything that can be cancelled
-            RetrieveDerived<ICancellable>()?.Apply(adjunct => adjunct.Cancel(reason));
-
-            // Trigger any registered callbacks
-            _onCancelled.ApplyAndWait(fn => fn(reason));
-
             // Chain to base
             await base.Cancel(reason);
+            await WaitForCompletion();
+
+            // Trigger any registered callbacks
+            _onCancelled.Reverse();
+            _onCancelled.ApplyAndWait(fn => fn(reason));
+
         }
 
         public override async Task Fault(Exception exception)
         {
-            // Fault anything that can be faulted
-            RetrieveDerived<IFaultable>()?.Apply(adjunct => adjunct.Fault(exception));
-
-            // Trigger any registered callbacks
-            _onFaulted.ApplyAndWait(fn => fn(exception.Message, exception));
-
             // Chain to base
             await base.Fault(exception);
+            await WaitForCompletion();
+
+            // Trigger any registered callbacks
+            _onFaulted.Reverse();
+            _onFaulted.ApplyAndWait(fn => fn(exception.Message, exception));
         }
 
         public override async Task Fault(string reason, Exception exception = null)
         {
-            // Fault anything that can be faulted
-            RetrieveDerived<IFaultable>()?.Apply(adjunct => adjunct.Fault(reason, exception));
+            // Chain to base
+            await base.Fault(reason, exception);
+            await WaitForCompletion();
 
             // Trigger any registered callbacks
             _onFaulted.ApplyAndWait(fn => fn(reason, exception));
-
-            // Chain to base
-            await base.Fault(reason,exception);
         }
 
         /// <summary>
@@ -275,11 +298,16 @@ namespace Pipes.Types
             return new DisposableContextHold(this);
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             // Do closing action (like disposals)
             if (!IsCompleted && !IsCancelled && !IsFaulted)
                 Close();
+
+            // Dispose components
+            Components.Apply(component => ((IPipelineComponent)component).Dispose());
+
+            base.Dispose();
         }
 
 

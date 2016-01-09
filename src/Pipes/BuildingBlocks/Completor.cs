@@ -10,7 +10,7 @@
 
 //namespace Pipes.BuildingBlocks
 //{
-//    public class Completor<TData,TContext> : BuildingBlock<TContext>, ICompletionSourceBuilder<TData, TContext> where TContext : class, IOperationContext where TData : class
+//    public class Completor<TData,TContext> : BuildingBlock<TContext>, ICompletionSourceBuilder<TData, TContext> where TContext : OperationContext where TData : class
 //    {
 //        private readonly List<Func<IPipelineMessage<TData, TContext>, Task>> _completionActions;
 //        private readonly List<Func<IPipelineMessage<TData, TContext>, Task>> _cancelActions;

@@ -4,12 +4,13 @@ using Pipes.Abstraction;
 using Pipes.Exceptions;
 using Pipes.Interfaces;
 using Pipes.Stubs;
+using Pipes.Types;
 
 namespace Pipes.BuildingBlocks
 {
     internal class Invocation<TData, TContext> : BuildingBlock<TContext>, IPipelineInvocation<TContext>
         where TData : class
-        where TContext : class, IOperationContext
+        where TContext : OperationContext
     {
         private readonly InvocationStub<TData,TContext> _proxy;
         private bool _blackhole = true;
@@ -47,8 +48,10 @@ namespace Pipes.BuildingBlocks
 
         public void WhichTransmitsTo(Stub<TContext> target)
         {
+            if( target == null )
+                throw new ArgumentException("The component stub has not been defined.  Move invocation lower in the describe set.");
             _blackhole = false;
-            _proxy.SetTarget(target);
+            _proxy.SetTargetStub(target);
         }
     }
 }

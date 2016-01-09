@@ -5,42 +5,44 @@ using Pipes.Exceptions;
 using Pipes.Implementation;
 using Pipes.Interfaces;
 using Pipes.Stubs;
+using Pipes.Types;
 
-namespace Pipes.Types
+namespace Pipes.Implementation
 {
-    internal abstract class MessageTap<TContext> : Conduit<TContext>
-        where TContext : class, IOperationContext
+    internal abstract class MessageTap<TContext> : Route<TContext>
+        where TContext : OperationContext
     {
         protected bool Blackhole;
 
         internal abstract void AttachTo(Pipeline<TContext> pipeline);
 
-        protected MessageTap(Stub<TContext> source, Stub<TContext> target, Type messageType) : base(source, target, messageType)
+        protected MessageTap(Stub<TContext> source, Stub<TContext> target, Type dataType) : base(source, target, dataType)
         {
             
         }
     }
 
-    internal class MessageTap<TData, TContext> : MessageTap<TContext>, IDisposable, IPipelineMessageTap<TData,TContext> 
+    internal class MessageTap<TData, TContext> : MessageTap<TContext>,  IPipelineMessageTap<TData,TContext> 
         where TData : class
-        where TContext : class, IOperationContext
+        where TContext : OperationContext
     {
         private readonly MessageTarget<TData,TContext> _messageTarget;
         private readonly ReceiverStub<TData,TContext> _rxStub;
 
         internal MessageTap(Pipeline<TContext> pipeline) : base(null, null, typeof(TData))
         {
-            // A wee bit dirty, but it's leads to nice code reuse
+            // A wee bit dirty, but it leads to nice code reuse
             // "Target" is the conduit's message receiver
             // _messageTarget is the same bridge which holds the target function's delegate
             //    for both Taps and PipelineComponents
             // _receiver is invokable side of _messageTarget, which has .Receive
             _rxStub = new ReceiverStub<TData,TContext>(pipeline);
             _messageTarget = new MessageTarget<TData,TContext>();
-            _messageTarget.Attach(_rxStub);
+            //_messageTarget.Attach(_rxStub);
 
 
             Receiver = _rxStub;
+            // TODO: Hookup rx with off threading
             // Therefore, if( Target is ReceiverStub ) during message handling
             // means that you're handling a tap.  Otherwise the target is likely
             // a ConstructorStub.
@@ -51,6 +53,7 @@ namespace Pipes.Types
             if (Blackhole)
                 throw new NotAttachedException("MessageTap is black-hole. (rx without delegate)");
 
+            _rxStub.Routes.Add(this);
             _messageTarget.Attach(_rxStub);
             pipeline.AddRx(_rxStub, null);
         }

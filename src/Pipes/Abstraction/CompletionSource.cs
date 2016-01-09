@@ -12,13 +12,28 @@ namespace Pipes.Abstraction
     /// sdf
     /// </summary>
     /// <remarks>
-    /// The default implementation of Branch(...) is to complete when all children are completed or all but one is cancelled, cancel when all children are cancelled, and fault when one child faults (cancelling the rest).
+    /// The default implementation of Branch(...) will:
+    ///     Complete when all children are completed or at least one child is completed and the rest are cancelled.
+    ///     Cancel when all children are cancelled.
+    ///     Fault when one child faults (cancelling the rest).
     /// </remarks>
     public abstract class CompletionSource : ICompletionSource, ICompletionToken, ICompletionEventRegistrar
     {
-        private readonly List<CompletionTask> _completionTasks = new List<CompletionTask>();
-        private readonly List<CancellationTask> _cancelTasks = new List<CancellationTask>();
-        private readonly List<FaultTask> _faultTasks = new List<FaultTask>();
+        /// <summary>
+        /// The amount of time in milliseconds to wait for all messages to complete after a pipeline invocation has completed.
+        /// Because all components run as concurrently as possible, it is very likely that invocation will return almost immediately.
+        /// If the timeout is reached, the context will be canceled and all messages will need to be accounted for before returning.
+        /// The default is (null) which indicates there is no timeout.
+        /// </summary>
+        public int? WaitForIdleTimeout { get; set; }
+
+        /// <summary>
+        /// The amount of time in milliseconds to yield the invocation thread context (as defined by the TPL scheduler) before checking 
+        /// for an idle context indicating the invocation and all related messages have completed (successfully or not).  Setting this
+        /// value too low can waste cpu cycles, and setting the value too high will inflate latency.  
+        /// The default is 25ms.
+        /// </summary>
+        public int WaitForIdleTimeslice { get; set; } = 25;
 
         public virtual bool IsCompleted { get; protected set; }
 
@@ -26,7 +41,19 @@ namespace Pipes.Abstraction
 
         public virtual bool IsFaulted { get; protected set; }
 
-        public virtual bool IsUnset { get { return !IsCompleted && !IsCancelled && !IsFaulted; } }
+        public virtual bool CompletionStateIsUnset => !IsCompleted && !IsCancelled && !IsFaulted;
+
+        /// <summary>
+        /// The cancellation token is provided for compatibility with the TPL.
+        /// </summary>
+        public CancellationToken CancellationToken => _cts.Token;
+
+        private readonly List<CompletionTask> _completionTasks = new List<CompletionTask>();
+        private readonly List<CancellationTask> _cancelTasks = new List<CancellationTask>();
+        private readonly List<FaultTask> _faultTasks = new List<FaultTask>();
+        private readonly CancellationTokenSource _cts = new CancellationTokenSource();
+
+
 
         public virtual async Task Complete()
         {
@@ -39,6 +66,7 @@ namespace Pipes.Abstraction
 
         public virtual async Task Cancel(string reason = null)
         {
+            _cts.Cancel();
             IsCancelled = true;
             if (_cancelTasks.Any())
                 await Task.WhenAll(_cancelTasks.Select(task => task(reason)));
@@ -48,6 +76,7 @@ namespace Pipes.Abstraction
 
         public virtual async Task Fault(Exception exception)
         {
+            _cts.Cancel();
             IsFaulted = true;
             if (_faultTasks.Any())
                 await Task.WhenAll(_faultTasks.Select(task => task("Completable task faulted", exception)));
@@ -57,6 +86,7 @@ namespace Pipes.Abstraction
 
         public virtual async Task Fault(string reason, Exception exception = null)
         {
+            _cts.Cancel();
             IsFaulted = true;
             if (_faultTasks.Any())
                 await Task.WhenAll(_faultTasks.Select(task => task(reason,exception)));
@@ -64,12 +94,12 @@ namespace Pipes.Abstraction
                 await Target.EmptyTask;
         }
 
-        public async Task WaitForCompletion(int? timeoutMs = null, int waitTimeSliceMs = 200)
+        public async Task WaitForCompletion()
         {
-            var timeoutStamp = timeoutMs.HasValue ? DateTime.UtcNow.AddMilliseconds(timeoutMs.Value) : DateTime.MaxValue;
-            while (IsUnset && DateTime.UtcNow < timeoutStamp)
+            var timeoutStamp = WaitForIdleTimeout.HasValue ? DateTime.UtcNow.AddMilliseconds(WaitForIdleTimeout.Value) : DateTime.MaxValue;
+            while (CompletionStateIsUnset && DateTime.UtcNow < timeoutStamp)
             {
-                await Task.Delay(waitTimeSliceMs);
+                await Task.Delay(WaitForIdleTimeslice);
             }
         }
 
@@ -86,6 +116,13 @@ namespace Pipes.Abstraction
         public void AddFaultTask(FaultTask task)
         {
             _faultTasks.Add(task);
+        }
+
+        public virtual void Dispose()
+        {
+            if (CompletionStateIsUnset)
+                // TODO: Make Exception for this
+                Fault("Did not complete before disposal").Wait();
         }
     }
 }

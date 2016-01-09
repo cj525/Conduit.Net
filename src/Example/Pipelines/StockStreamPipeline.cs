@@ -6,6 +6,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Pipes.Abstraction;
+using Pipes.Example.Implementation;
+using Pipes.Example.PipelineAdjuncts;
 using Pipes.Example.PipelineComponents;
 using Pipes.Example.PipelineMeta;
 using Pipes.Example.PipelineMessages;
@@ -18,9 +20,11 @@ namespace Pipes.Example.Pipelines
 {
     class StockStreamPipeline : Pipeline
     {
-        private Func<Stream, object, Task> _entryPoint;
+        private static readonly string[] Delimiters = { "," };
 
-        protected override void Describe(IPipelineBuilder<IOperationContext> thisPipeline)
+        private Func<StockStream, object, Task> _entryPoint;
+
+        protected override void Describe(IPipelineBuilder<OperationContext> thisPipeline)
         {
             var reader = Component;
             var parser = Component;
@@ -29,10 +33,7 @@ namespace Pipes.Example.Pipelines
             var updater = Component;
 
             thisPipeline
-                .IsInvokedAsyncBy(ref _entryPoint);
-
-            thisPipeline
-                .Constructs(() => new StreamLineReader())
+                .Constructs(() => new StockStreamReader())
                 .Into(ref reader);
 
             thisPipeline
@@ -44,13 +45,18 @@ namespace Pipes.Example.Pipelines
                 .Into(ref emitter);
 
             thisPipeline
-                .Constructs(()=>new PocoWriter<PocoWithId>())
+                .Constructs(()=>new PocoWriter<StockTick>())
                 .Into(ref writer);
 
             thisPipeline
                 .Constructs(()=>new StockStatisticUpdater())
                 .Into(ref updater);
 
+            thisPipeline
+                .IsInvokedAsyncBy(ref _entryPoint)
+                .WhichTransmitsTo(reader);
+
+            reader.SendsMessagesTo(writer);
             reader
                 // When each line is sent
                 .SendsMessage<StreamLine>()
@@ -64,14 +70,28 @@ namespace Pipes.Example.Pipelines
                 //    .OnFault(HandleFault)
                 //    .OnCancellation(HandleCancellation)
                 //);
+            parser.BroadcastsAllMessages();
 
             emitter
                 .SendsMessage<StockTick>()
                 //.WithSubcontext<PocoWithIdMeta>(message => new PocoWithIdMeta {Type = message.Data?.GetType(), StockId = message.Data?.Id ?? -1})
                 .To(writer);
+            writer.SendsMessagesTo(updater);
         }
 
-        private async Task HandleCancellation(CompletionSource source, IPipelineMessage<StreamLine, IOperationContext> message)
+        protected override OperationContext ConstructContext<TData>(TData data, object meta = null)
+        {
+            var context = base.ConstructContext(data, meta);
+            context.Store(new LineParserConfig { Delimiters = Delimiters });
+            return context;
+        }
+
+        protected override void HandleUnroutableMessage<T>(IPipelineMessage<T, OperationContext> message)
+        {
+            Console.WriteLine("Unhandled message in pipeline: {0}", message.Data.GetType());
+        }
+
+        private async Task HandleCancellation(CompletionSource source, IPipelineMessage<StreamLine, OperationContext> message)
         {
             var metas = message.MetaStack.ToArray();
             var stockStreamMeta = (StockStreamMeta)metas.FirstOrDefault(x => x.GetType() == typeof (StockStreamMeta));
@@ -81,7 +101,7 @@ namespace Pipes.Example.Pipelines
             await NoOp;
         }
 
-        private async Task HandleFault(CompletionSource source, IPipelineMessage<StreamLine, IOperationContext> message, Exception exception = null)
+        private async Task HandleFault(CompletionSource source, IPipelineMessage<StreamLine, OperationContext> message, Exception exception = null)
         {
             var tolerance = message.Context.Ensure(() => new FaultTolerence());
             tolerance.Add(exception);
@@ -89,7 +109,7 @@ namespace Pipes.Example.Pipelines
                 await source.Fault(tolerance.ToException());
         }
 
-        private void HandleCancellations(IPipelineMessage<StreamLine, IOperationContext> message)
+        private void HandleCancellations(IPipelineMessage<StreamLine, OperationContext> message)
         {
             // TODO: Could reach into data stack?  Would need to make a new message.
             // source -> [HasCompletion] -> Other -> [Cancellation]
@@ -99,7 +119,7 @@ namespace Pipes.Example.Pipelines
             message.Context.Fault( "Cancel escalated to fault!" );
         }
 
-        public async Task ProcessStream(string name, Stream stream)
+        public async Task ProcessStream(string name, StockStream stream)
         {
             await _entryPoint(stream, new StockStreamMeta {Name = name});
         }
