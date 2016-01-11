@@ -56,7 +56,8 @@ namespace Pipes.Example.Pipelines
                 .IsInvokedAsyncBy(ref _entryPoint)
                 .WhichTransmitsTo(reader);
 
-            reader.SendsMessagesTo(writer);
+            //thisPipeline.IsImplicitlyWired();
+            reader.HasPrivateChannel().WhichSendsMessage<StreamEnded>();
             reader
                 // When each line is sent
                 .SendsMessage<StreamLine>()

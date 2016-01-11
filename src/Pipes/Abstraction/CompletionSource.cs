@@ -94,7 +94,7 @@ namespace Pipes.Abstraction
                 await Target.EmptyTask;
         }
 
-        public async Task WaitForCompletion()
+        public virtual async Task WaitForCompletion()
         {
             var timeoutStamp = WaitForIdleTimeout.HasValue ? DateTime.UtcNow.AddMilliseconds(WaitForIdleTimeout.Value) : DateTime.MaxValue;
             while (CompletionStateIsUnset && DateTime.UtcNow < timeoutStamp)

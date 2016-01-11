@@ -27,31 +27,15 @@ namespace Pipes.Implementation
         {
             try
             {
-                // Locals
-                var context = message.Context;
-                var thunks = default(Thunk[]);
-                // Cache targeted version of thunk
-                if (!context.Thunks.ContainsKey(this))
-                {
-                    lock (this)
-                    {
-                        if (!context.Thunks.ContainsKey(this))
-                        {
-                            thunks = _thunks.Select(thunk => thunk.AttachTo<TData,TContext>(context.Components)).ToArray();
-                            context.Thunks.Add( this, thunks);
-                        }
-                        else
-                        {
-                            thunks = context.Thunks[this];
-                        }
-                    }
-                }
-                else
-                {
-                    thunks = context.Thunks[this];
-                }
+                // Message is in flight
+                _pipeline.MessageInFlight(message);
 
-                await Task.WhenAll(thunks.Select(thunk => ((Thunk<TContext>)thunk).Invoke(message)));
+                // Localize
+                var thunks = GetInstanceThunks<TData>(message.Context);
+                var tasks = thunks.Select(thunk => ((Thunk<TData, TContext>) thunk).Invoke(message));
+                
+                // Message is in flight simulataneously
+                await Task.WhenAll(tasks);
             }
             catch (Exception exception)
             {
@@ -61,8 +45,39 @@ namespace Pipes.Implementation
                 // Handle the exception
                 _pipeline.HandleException(pipelineException);
             }
+            finally
+            {
+                // Message has completed
+                _pipeline.MessageCompleted(message);
+            }
         }
 
+        private Thunk[] GetInstanceThunks<TData>(TContext context) where TData : class
+        {
+            var thunks = default(Thunk[]);
 
+            // Cache targeted version of thunk
+            if (!context.Thunks.ContainsKey(this))
+            {
+                lock (this)
+                {
+                    if (!context.Thunks.ContainsKey(this))
+                    {
+                        thunks = _thunks.Select(thunk => thunk.Retarget<TData,TContext>(context.Components)).ToArray();
+                        context.Thunks.Add(this, thunks);
+                    }
+                    else
+                    {
+                        thunks = context.Thunks[this];
+                    }
+                }
+            }
+            else
+            {
+                thunks = context.Thunks[this];
+            }
+
+            return thunks;
+        }
     }
 }

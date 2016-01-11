@@ -39,12 +39,19 @@ namespace Pipes.Example.PipelineComponents
                 await context.Fault("Can't determine line parser config!");
             else
             {
-                using (var enumerator = stream.GetEnumerator())
+                var lineNumber = 0;
+                foreach (var entry in stream)
                 {
-                    await Loop(context, new StreamLoop(this, message, enumerator));
-
-                    Emit(message, new StreamEnded());
+                    lineNumber++;
+                    Emit(message, new StreamLine { Entries = entry, LineNumber = lineNumber });
                 }
+                //using (var enumerator = stream.GetEnumerator())
+                //{
+
+                //    await Loop(context, new StreamLoop(this, message, enumerator));
+
+                //    Emit(message, new StreamEnded());
+                //}
             }
         }
 

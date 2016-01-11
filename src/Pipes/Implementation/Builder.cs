@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Pipes.Abstraction;
 using Pipes.BuildingBlocks;
@@ -22,6 +23,10 @@ namespace Pipes.Implementation
             _pipeline = pipeline;
         }
 
+        public void IsImplicitlyWired()
+        {
+            _pipeline.AddRoutes(new [] {new Route<TContext>(null,null)});
+        }
         public IPipelineInvocation<TContext> IsInvokedBy<TData>(ref Action<TData, object> trigger) where TData : class
         {
             if (_component != null)

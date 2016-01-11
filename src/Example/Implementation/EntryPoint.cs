@@ -17,7 +17,7 @@ namespace Pipes.Example.Implementation
 {
     class EntryPoint
     {
-        static int EntryCount = 10000;
+        static int _entryCount = 20000;
         static int _entriesCommited;
 
 
@@ -35,24 +35,23 @@ namespace Pipes.Example.Implementation
         async Task RunApproaches()
         {
             await PipelineApproach();
-            await NonPipelineApproach();
+            //PretendDb.Clear();
+            //await NonPipelineApproach();
         }
 
         async Task PipelineApproach()
         {
             _entriesCommited = 0;
-            Console.WriteLine($"Running pipeline for {EntryCount} stock ticks");
+            Console.WriteLine($"Running pipeline for {_entryCount} stock ticks");
             var stamp = DateTime.UtcNow;
 
             var pipeline = new StockStreamPipeline();
             pipeline.CreateMessageTap<PocoCommited<StockTick>>().WhichTriggers(EntryCommited);
             pipeline.Initialize();
 
-            await pipeline.ProcessStream("Stock Stream Test", new StockStream(EntryCount));
+            await pipeline.ProcessStream("Stock Stream Test", new StockStream(_entryCount));
 
-            //Console.WriteLine("Completing...");
-
-            Console.WriteLine($"{PretendDb.Count<StockTick>()} stock ticks");
+            Console.WriteLine($"{PretendDb.Count<StockTick>()} stock ticks in db");
 
             var time = DateTime.UtcNow - stamp;
             Console.WriteLine($"Ran for {time.TotalMilliseconds} milliseconds");
@@ -63,18 +62,19 @@ namespace Pipes.Example.Implementation
             var count = Interlocked.Increment(ref _entriesCommited);
             if ( count % 1000 == 0)
             {
-                Console.WriteLine($"{count} stock ticks commited");
+                //Console.WriteLine($"{count} stock ticks commited");
+                //Console.WriteLine("Count: " + Process.GetCurrentProcess().Threads.Count);
             }
         }
 
 
         async Task NonPipelineApproach()
         {
-            EntryCount /= 100;
-            Console.WriteLine($"Running non-pipeline for {EntryCount} stock ticks");
+            _entryCount /= 100;
+            Console.WriteLine($"Running non-pipeline for {_entryCount} stock ticks");
             var stamp = DateTime.UtcNow;
 
-            var stream = new StockStream(EntryCount);
+            var stream = new StockStream(_entryCount);
 
             using (var enumerator = stream.GetEnumerator())
             {
@@ -116,6 +116,8 @@ namespace Pipes.Example.Implementation
 
             var time = DateTime.UtcNow - stamp;
             Console.WriteLine($"Ran for {time.TotalMilliseconds} milliseconds");
+
+            Console.WriteLine($"{PretendDb.Count<StockTick>()} stock ticks in db");
         }
 
     }

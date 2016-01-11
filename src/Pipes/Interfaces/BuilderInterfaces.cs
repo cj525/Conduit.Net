@@ -11,6 +11,8 @@ namespace Pipes.Interfaces
         IPipelineInvocation<TContext> IsInvokedBy<TData>(ref Action<TData, object> trigger) where TData : class;
         IPipelineInvocation<TContext> IsInvokedAsyncBy<TData>(ref Func<TData, Task> trigger) where TData : class;
         IPipelineInvocation<TContext> IsInvokedAsyncBy<TData>(ref Func<TData, object, Task> trigger) where TData : class;
+
+        void IsImplicitlyWired();
     }
 
     public interface IPipelineConstruction<TContext> where TContext : OperationContext

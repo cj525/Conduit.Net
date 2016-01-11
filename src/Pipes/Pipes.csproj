@@ -52,7 +52,6 @@
     <Compile Include="BuildingBlocks\Receiver.cs" />
     <Compile Include="BuildingBlocks\Transmitter.cs" />
     <Compile Include="Exceptions\BadAttachmentException.cs" />
-    <Compile Include="Exceptions\NoConduitException.cs" />
     <Compile Include="Exceptions\NotAttachedException.cs" />
     <Compile Include="Exceptions\ProxyAlreadyAssignedException.cs" />
     <Compile Include="Extensions\EnumerableExtensions.cs" />

@@ -80,13 +80,13 @@ namespace Pipes.Abstraction
         }
 
 
-        protected virtual void MessageInFlight<TData>(IPipelineMessage<TData, TContext> message) where TData : class
+        internal virtual void MessageInFlight<TData>(IPipelineMessage<TData, TContext> message) where TData : class
         {
             Interlocked.Increment(ref _totalMessagesInFlight);
             message.Context.MessageInFlight();
         }
 
-        protected virtual void MessageCompleted<TData>(IPipelineMessage<TData, TContext> message) where TData : class
+        internal virtual void MessageCompleted<TData>(IPipelineMessage<TData, TContext> message) where TData : class
         {
             message.Context.MessageCompleted();
             Interlocked.Decrement(ref _totalMessagesInFlight);
@@ -144,160 +144,7 @@ namespace Pipes.Abstraction
             _transmitters.Apply(type => type.Value.Apply(tx => tx.Value.AttachTo(this)));
         }
 
-        //private void GenerateAndConnectConduits()
-        //{
-        //    // Gather sender's types
-        //    var senderTypes = _components.Select(component => component.GetType()).Distinct();
-
-        //    // For each sender, including null (tap), create conduit for each type of sendable message
-        //    foreach (var senderType in senderTypes)
-        //    {
-        //        // Localize loop variable
-        //        var sType = senderType;
-        //        var sCtor = _ctors.FirstOrDefault(ctor => ctor.ContainedType == sType);
-
-        //        // Add conduit sender slot
-        //        var senderSlot = new Dictionary<Type, List<Route<TContext>>>();
-        //        _conduits.Add(senderType, senderSlot);
-
-        //        // Create tx/rx pairs
-        //        foreach (var tx in _transmitters.Where(tx => tx.Component.GetType() == sType))
-        //        {
-        //            // Localize loop variable
-        //            var ltx = tx;
-        //            var rxs = _receivers.Where(rx => rx.Component != null && rx.ContainedType.IsAssignableFrom(ltx.ContainedType) && rx.Component != tx.Component).ToArray(); // rx != tx !!!
-        //            foreach (var rx in rxs)
-        //            {
-        //                // Localize loop variable
-        //                var lrx = rx;
-        //                var messageType = rx.ContainedType;
-        //                var tCtor = _ctors.FirstOrDefault(ctor => ctor.ContainedType == lrx.Component.GetType());
-
-        //                // Create message slot for this sender
-        //                if (!senderSlot.ContainsKey(messageType))
-        //                    senderSlot.Add(messageType, new List<Route<TContext>>());
-
-        //                var messageSlot = senderSlot[messageType];
-
-        //                ////// If this is a manifold, create/use manifold entry
-        //                ////if (tCtor is ConstructorManifoldStub<TContext>)
-        //                ////{
-        //                ////    var manifolds = messageSlot.Where(slot => slot.Target == tCtor && slot.Source == sCtor).ToArray();
-        //                ////    if (!manifolds.Any())
-        //                ////    {
-        //                ////        var conduit = new Conduit<TContext>(sCtor, tCtor);
-        //                ////        messageSlot.Add(conduit);
-        //                ////        messageSlot = conduit.AsManifold();
-        //                ////    }
-        //                ////    else
-        //                ////    {
-        //                ////        messageSlot = manifolds.First().AsManifold();
-        //                ////    }
-        //                ////}
-
-        //                // Find declared conduits
-        //                if (!IsAutoWired)
-        //                {
-        //                    var existingTubes = _tubes.Where(tube => tube.Source == sCtor && tube.Target == tCtor && (tube.DataType == null || tube.DataType == messageType)).ToArray();
-
-        //                    // If more than one specified
-        //                    if (existingTubes.Length > 1)
-        //                    {
-        //                        // Use the typed channel
-        //                        existingTubes = existingTubes.Where(tube => tube.DataType != null).ToArray();
-
-        //                        // Not just one?  That's a problem
-        //                        if (existingTubes.Length != 1)
-        //                            throw new NotSupportedException("Overly specified conduit.. too many (typed) matching routes");
-        //                    }
-
-        //                    // No routes
-        //                    if (existingTubes.Length != 1)
-        //                        continue;
-
-        //                    //    throw new NotSupportedException($"Under specified conduit.. no matching routes for {senderType.Name} to send a {tx.ContainedType.Name}");
-
-        //                    // Tube exists, use it! (well, copy it first)..  (now it's promote to conduit)
-        //                    messageSlot.Add(existingTubes.First().Clone(rx));
-        //                }
-        //                else
-        //                {
-        //                    // And add said conduit
-        //                    messageSlot.Add(new Route<TContext>(sCtor, tCtor, messageType) { Receiver = rx });
-        //                }
-        //            }
-        //        }
-        //    }
-
-
-        //    var tapSlots = AttachTaps();
-
-        //    // Lastly add invocations
-        //    foreach (var invocation in _invocations)
-        //    {
-        //        var messageType = invocation.ContainedType;
-        //        if (!tapSlots.ContainsKey(messageType))
-        //            tapSlots.Add(messageType, new List<Route<TContext>>());
-        //        var mSlot = tapSlots[messageType];
-        //        var linv = invocation;
-        //        // ReSharper disable once LoopCanBeConvertedToQuery
-        //        foreach (var rx in _receivers.Where(rx => rx.Component != null && rx.Component.GetType() == linv.Target.ContainedType && rx.ContainedType.IsAssignableFrom(messageType)))
-        //        {
-        //            var lrx = rx;
-        //            var tCtor = _ctors.FirstOrDefault(ctor => ctor.ContainedType == lrx.Component.GetType());
-        //            mSlot.Add(new Route<TContext>(invocation, tCtor, messageType) { Receiver = rx });
-        //        }
-
-        //    }
-        //}
-
-        //private Dictionary<Type, List<Route<TContext>>> AttachTaps()
-        //{
-        //    // Add taps sender slot
-        //    var tapSlots = new Dictionary<Type, List<Route<TContext>>>();
-        //    _conduits.Add(_thisType, tapSlots);
-
-        //    // Now add all the taps
-        //    foreach (var tap in _taps)
-        //    {
-        //        var ltap = tap;
-        //        var messageType = tap.DataType;
-
-        //        // Get transmitters for this message
-        //        var senders = _transmitters.Where(tx => messageType.IsAssignableFrom(tx.ContainedType)).ToArray();
-        //        var txTypes = senders.Select(target => target.Component.GetType()).Distinct().ToArray();
-        //        //foreach (var ctor in targetComponents.Select(targetComponent => _ctors.FirstOrDefault(c => c.Component == targetComponent)))
-
-        //        // Apply the tap for every tx that matches
-        //        foreach (var txType in txTypes)
-        //        {
-        //            var slot = _conduits[txType];
-        //            if (!slot.ContainsKey(messageType))
-        //                slot.Add(messageType, new List<Route<TContext>>());
-        //            //slot[messageType].Add(tap);
-        //        }
-        //        foreach (var txType in txTypes)
-        //        {
-        //            var slot = _conduits[txType];
-        //            foreach (var s in slot)
-        //            {
-        //                if (s.Key.IsAssignableFrom(messageType))
-        //                    s.Value.Add(tap);
-        //            }
-        //        }
-
-        //        // Create message slot for this sender
-        //        if (!tapSlots.ContainsKey(messageType))
-        //            tapSlots.Add(messageType, new List<Route<TContext>>());
-        //        var mSlot = tapSlots[messageType];
-        //        mSlot.Add(tap);
-
-        //        //mSlot.Add(tap);
-        //    }
-        //    return tapSlots;
-        //}
-
-        [DebuggerHidden]
+        //[DebuggerHidden]
         internal void RouteMessage<TData>(IPipelineMessage<TData, TContext> message, Stub<TContext> invocationTarget = null ) where TData : class
         {
             // Locals
@@ -310,14 +157,11 @@ namespace Pipes.Abstraction
             }
 
             // Don't send messages in a terminated context
-            if (!context.CompletionStateIsUnset)
-                throw new OperationCanceledException("PipelineContext is " + (context.IsFaulted ? "faulted" : context.IsCancelled ? "cancelled" : "completed.  Can't route message."));
+            if (context.IsFaulted || context.IsCancelled)
+                throw new OperationCanceledException("PipelineContext is " + (context.IsFaulted ? "faulted" : "cancelled"));
 
             try
             {
-                // Track messages in flight (both total and per context)
-                MessageInFlight(message);
-
                 // Sender is null during invocation, in which case, use the pipeline itself instead of a component instance.
                 var senderType = message.Sender?.GetType() ?? _thisType;
                 var dataType = typeof (TData);
@@ -328,11 +172,6 @@ namespace Pipes.Abstraction
                 // Invoke conduit
                 conduit.Transport(message);
             }
-            catch (NoConduitException)
-            {
-                // Could not find any routes
-                HandleUnroutableMessage(message);
-            }
             catch (Exception exception)
             {
                 // Wrap exception so message and context are available
@@ -340,10 +179,7 @@ namespace Pipes.Abstraction
 
                 // Abstraction
                 HandleException(exceptionMessage);
-            }
-            finally
-            {
-                // This message is done, no matter how it got that way
+
                 MessageCompleted(message);
             }
         }
@@ -428,12 +264,9 @@ namespace Pipes.Abstraction
             // Is explicitly wired
             if (!routes.Any())
             {
-                //throw new NotAttachedException($"Sender {senderType.Name} did not register routes for type {dataType.Name} in pipeline {_thisType.Name}.");
-                throw new NoConduitException();
+                throw new NotAttachedException($"Sender {senderType.Name} did not register routes for type {dataType.Name} in pipeline {_thisType.Name}.");
             }
 
-            var delegates = new List<Func<IPipelineComponent, IPipelineMessage<TContext>, TData, Task>>();
-            var indexes = new List<int>();
             var targets = new List<Target>();
             foreach (var route in routes)
             {
@@ -459,7 +292,7 @@ namespace Pipes.Abstraction
 
             if (!targets.Any())
             {
-                throw new NoConduitException();
+                targets.Add(new MessageTarget<TData,TContext> { Instance = this, MethodInfo = ((Action<IPipelineMessage<TData,TContext>>)HandleUnroutableMessage).Method});
             }
 
             return new Conduit<TContext>(this, targets.Select(target => new Thunk<TData,TContext>(target)));
@@ -578,7 +411,7 @@ namespace Pipes.Abstraction
             _receivers.Add(rx);
         }
 
-        internal void AddRoutes(List<Route<TContext>> routes)
+        internal void AddRoutes(IEnumerable<Route<TContext>> routes)
         {
             _routes.AddRange(routes);
         }

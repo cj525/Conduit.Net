@@ -137,7 +137,7 @@ namespace Pipes.Types
                     throw new DataMisalignedException("Context Holds is less than 0.");
 
                 // Take the easy way out
-                if (_messagesInFlight != 0 || _contextHolds != 0 || !base.IsCompleted)
+                if (_messagesInFlight != 0 || _contextHolds != 0)
                 {
                     return false;
                 }
@@ -145,6 +145,8 @@ namespace Pipes.Types
                 return true;
             }
         }
+
+
 
         internal CompletionBuffer<T> InitializeCompletionBuffer<T>(int concurrentLimit, CompletionTask completionTask = null, CancellationTask cancellationTask = null, FaultTask faultTask = null)
         {

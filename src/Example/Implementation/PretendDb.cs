@@ -3,15 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Principal;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Pipes.Example.Implementation
 {
     class PretendDb
     {
-        public static int ReadDelayMs = 10;
-        public static int WriteDelayMs = 30;
-        public static int ScanDelayMs = 50;
+        public static int ReadDelayMs = 1;
+        public static int WriteDelayMs = 1;
+        public static int ScanDelayMs = 2;
 
         private static readonly Dictionary<Type,Dictionary<long, object>> Storage = new Dictionary<Type, Dictionary<long, object>>();
         private static readonly object Mutex = new { };
@@ -39,8 +40,8 @@ namespace Pipes.Example.Implementation
                     bucket.Add(id, data);
                 }
             }
-
             await Task.Delay(WriteDelayMs);
+            //Thread.Sleep(15);
         }
 
         public static async Task<T> RetrieveAsync<T>(long id, Func<T> defaultValue) where T: class, new()
@@ -68,6 +69,7 @@ namespace Pipes.Example.Implementation
             }
 
             await Task.Delay(ReadDelayMs);
+            //Thread.Sleep(15);
 
             return result;
         }

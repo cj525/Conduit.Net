@@ -42,10 +42,6 @@ namespace Pipes.Stubs
                 // Run the pipeline
                 Pipeline.RouteMessage(message, TargetStub);
 
-                // Mark underlying completion
-                if( !context.IsCancelled && !context.IsFaulted)
-                    await context.Complete();
-
                 // Wait for all messages to complete
                 await context.WaitForCompletion();
 
