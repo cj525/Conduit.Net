@@ -46,7 +46,7 @@ namespace Pipes.Stubs
                 await context.WaitForCompletion();
 
                 // Check for a throwable error
-                if (context.HasUnhandledException)
+                if (context.UnhandledException != null)
 
                     // Throw
                     throw context.UnhandledException;

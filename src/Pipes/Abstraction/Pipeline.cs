@@ -29,6 +29,7 @@ namespace Pipes.Abstraction
         private readonly List<Action<Pipeline<TContext>>> _attachActions = new List<Action<Pipeline<TContext>>>();
 
         private readonly List<IPipelineComponent<TContext>> _components = new List<IPipelineComponent<TContext>>();
+
         private readonly List<MessageTap<TContext>> _taps = new List<MessageTap<TContext>>();
 
         private readonly List<IPipelineConstructorStub<TContext>> _ctors = new List<IPipelineConstructorStub<TContext>>();
@@ -38,20 +39,21 @@ namespace Pipes.Abstraction
 
         // Both these are [senderType,[dataType,{entry}]]
         private readonly Dictionary<Type, Dictionary<Type, TransmitterStub<TContext>>> _transmitters = new Dictionary<Type, Dictionary<Type, TransmitterStub<TContext>>>();
+
         // This merges multiple receiver (tubes) into a single call
         private readonly Dictionary<Type, Dictionary<Type, Conduit<TContext>>> _conduits = new Dictionary<Type, Dictionary<Type, Conduit<TContext>>>();
 
-        // TODO: Probably don't need to track these 
         private readonly List<Route<TContext>> _routes = new List<Route<TContext>>();
+
+        private TypeSwitch _exceptionHandler = new TypeSwitch();
 
         private bool _terminated;
 
         // Atomic write, dirty read
         private int _totalMessagesInFlight;
+        private bool _implicitRouting;
 
         protected static Task NoOp => Target.EmptyTask;
-
-        //public IEnumerable<IPipelineComponent<TContext>> Components { get { return _components; } } 
 
         protected Pipeline()
         {
@@ -70,6 +72,10 @@ namespace Pipes.Abstraction
             Build();
         }
 
+        /// <summary>
+        /// Derived class should provide a new context.
+        /// Invocation data and meta are available
+        /// </summary>
         protected internal abstract TContext ConstructContext<TData>(TData data, object meta = null) where TData : class;
 
         protected internal virtual IPipelineComponent<TContext>[] ConstructComponents()
@@ -96,13 +102,23 @@ namespace Pipes.Abstraction
         {
             throw new UnroutablePipelineMessageException(typeof (T), message);
         }
-
-        protected internal virtual void HandleException(PipelineException<TContext> pipelineException)
+        protected internal void RegisterAsyncExceptionHandler<TException>(Func<IPipelineMessage<TContext>, TException, Task> handler) where TException : Exception
         {
-            // Default is to fault the context using the original exception
-            pipelineException.PipelineMessage.Context.Fault(pipelineException.InnerException).Wait();
+            _exceptionHandler.CaseAsync<TException>(async (exception, message) => await handler((IPipelineMessage<TContext>)message, exception));
         }
 
+        protected internal void RegisterExceptionHandler<TException>(Action<IPipelineMessage<TContext>, TException> handler) where TException : Exception
+        {
+            _exceptionHandler.Case<TException>((exception, message) => handler((IPipelineMessage<TContext>)message, exception));
+        }
+
+        internal async Task MessageException<T>(IPipelineMessage<T, TContext> message, Exception exception) where T : class
+        {
+            if (!_exceptionHandler.Switch(exception, message) && !(exception is OperationCanceledException))
+            {
+                await message.Context.HandleException(exception);
+            }
+        }
 
         /// <summary>
         /// Build and attach all pipeline components
@@ -160,28 +176,15 @@ namespace Pipes.Abstraction
             if (context.IsFaulted || context.IsCancelled)
                 throw new OperationCanceledException("PipelineContext is " + (context.IsFaulted ? "faulted" : "cancelled"));
 
-            try
-            {
-                // Sender is null during invocation, in which case, use the pipeline itself instead of a component instance.
-                var senderType = message.Sender?.GetType() ?? _thisType;
-                var dataType = typeof (TData);
+            // Sender is null during invocation, in which case, use the pipeline itself instead of a component instance.
+            var senderType = message.Sender?.GetType() ?? _thisType;
+            var dataType = typeof (TData);
 
-                // Find the conduit
-                var conduit = LookupConduit<TData>(senderType, dataType, invocationTarget);
+            // Find the conduit
+            var conduit = LookupConduit<TData>(senderType, dataType, invocationTarget);
 
-                // Invoke conduit
-                conduit.Transport(message);
-            }
-            catch (Exception exception)
-            {
-                // Wrap exception so message and context are available
-                var exceptionMessage = new PipelineException<TContext>(this, message, exception);
-
-                // Abstraction
-                HandleException(exceptionMessage);
-
-                MessageCompleted(message);
-            }
+            // Invoke conduit
+            conduit.Transport(message);
         }
 
         private Conduit<TContext> LookupConduit<TData>(Type senderType, Type dataType, Stub<TContext> invocationTarget = null) where TData : class
@@ -243,24 +246,25 @@ namespace Pipes.Abstraction
             // Localize
             Type dataType = typeof (TData);
             var routes = default(Route<TContext>[]);
-            if (senderType != _thisType)
+            if (!_implicitRouting)
             {
-                // Ensure transmitter type is known
-                if (!_transmitters.ContainsKey(senderType))
-                    throw new NotAttachedException($"Sender {senderType.Name} is not registered in pipeline {_thisType.Name}");
-
-                // Ensure transmitter exists for data type
-                var senderTransmitter = _transmitters[senderType];
-                if (!senderTransmitter.ContainsKey(dataType))
-                    throw new NotAttachedException($"Sender {senderType.Name} did not register emission of type {dataType.Namespace} in pipeline {_thisType.Name}.");
-                //senderTransmitter[dataType].Routes.ToArray();
-                routes = _routes.Where(route => route.Source?.ContainedType == senderType && (route.DataType == null || dataType.CanBeCastedTo(route.DataType))).ToArray();
+                if (senderType != _thisType)
+                {
+                    // Explicit
+                    EnsureTransmitter(senderType, dataType);
+                    routes = _routes.Where(route => route.Source?.ContainedType == senderType && (route.DataType == null || dataType.CanBeCastedTo(route.DataType))).ToArray();
+                }
+                else
+                {
+                    // Invocation
+                    routes = _routes.Where(route => route.Target == invocationTarget && dataType.CanBeCastedTo(route.DataType)).ToArray();
+                }
             }
             else
             {
-                routes = _routes.Where(route => route.Target == invocationTarget && dataType.CanBeCastedTo(route.DataType)).ToArray();
+                // Implicit
+                routes = new[] {new Route<TContext>(null, null, dataType)};
             }
-
             // Is explicitly wired
             if (!routes.Any())
             {
@@ -292,10 +296,24 @@ namespace Pipes.Abstraction
 
             if (!targets.Any())
             {
-                targets.Add(new MessageTarget<TData,TContext> { Instance = this, MethodInfo = ((Action<IPipelineMessage<TData,TContext>>)HandleUnroutableMessage).Method});
+                // Create target leading to internal methods, just to keep a unison invocation methodology 
+                targets.Add(new MessageTarget<TData, TContext> {Instance = this, MethodInfo = ((Action<IPipelineMessage<TData, TContext>>) HandleUnroutableMessage).Method});
             }
 
-            return new Conduit<TContext>(this, targets.Select(target => new Thunk<TData,TContext>(target)));
+            // Create conduit to targets
+            return new Conduit<TContext>(this, targets.Select(target => new Thunk<TData, TContext>(target)));
+        }
+
+        private void EnsureTransmitter(Type senderType, Type dataType) 
+        {
+            // Ensure transmitter type is known
+            if (!_transmitters.ContainsKey(senderType))
+                throw new NotAttachedException($"Sender {senderType.Name} is not registered in pipeline {_thisType.Name}");
+
+            // Ensure transmitter exists for data type
+            var senderTransmitter = _transmitters[senderType];
+            if (!senderTransmitter.ContainsKey(dataType))
+                throw new NotAttachedException($"Sender {senderType.Name} did not register emission of type {dataType.Namespace} in pipeline {_thisType.Name}.");
         }
 
         // ReSharper disable once MemberCanBePrivate.Global
@@ -318,6 +336,7 @@ namespace Pipes.Abstraction
             _components.Clear();
             _taps.Clear();
             _routes.Clear();
+            _exceptionHandler = new TypeSwitch();
         }
 
         public async Task WaitForIdle(int waitTimeSliceMs = 50)
@@ -411,6 +430,11 @@ namespace Pipes.Abstraction
             _receivers.Add(rx);
         }
 
+        internal void ImplicitlyWired()
+        {
+            _implicitRouting = true;
+        }
+
         internal void AddRoutes(IEnumerable<Route<TContext>> routes)
         {
             _routes.AddRange(routes);
@@ -452,5 +476,7 @@ namespace Pipes.Abstraction
                 DataType = type;
             }
         }
+
+
     }
 }

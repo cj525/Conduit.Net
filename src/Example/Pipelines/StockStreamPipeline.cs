@@ -1,9 +1,6 @@
 ﻿using System;
-using System.CodeDom;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Pipes.Abstraction;
 using Pipes.Example.Implementation;
@@ -12,7 +9,6 @@ using Pipes.Example.PipelineComponents;
 using Pipes.Example.PipelineMeta;
 using Pipes.Example.PipelineMessages;
 using Pipes.Example.Schema;
-using Pipes.Example.Schema.Abstraction;
 using Pipes.Interfaces;
 using Pipes.Types;
 
@@ -56,7 +52,9 @@ namespace Pipes.Example.Pipelines
                 .IsInvokedAsyncBy(ref _entryPoint)
                 .WhichTransmitsTo(reader);
 
-            //thisPipeline.IsImplicitlyWired();
+            thisPipeline.IsImplicitlyWired();
+            thisPipeline.HandlesException<RandomException>((message, exception) => Console.WriteLine("Exception: " + String.Join(", ", message.DataStack)));
+            return;
             reader.HasPrivateChannel().WhichSendsMessage<StreamEnded>();
             reader
                 // When each line is sent
@@ -104,20 +102,20 @@ namespace Pipes.Example.Pipelines
 
         private async Task HandleFault(CompletionSource source, IPipelineMessage<StreamLine, OperationContext> message, Exception exception = null)
         {
-            var tolerance = message.Context.Ensure(() => new FaultTolerence());
+            var tolerance = message.Context.EnsureAdjunct(() => new FaultTolerence());
             tolerance.Add(exception);
             if (tolerance.FaultCount > 10)
                 await source.Fault(tolerance.ToException());
         }
 
-        private void HandleCancellations(IPipelineMessage<StreamLine, OperationContext> message)
+        private async Task  HandleCancellations(IPipelineMessage<StreamLine, OperationContext> message)
         {
             // TODO: Could reach into data stack?  Would need to make a new message.
             // source -> [HasCompletion] -> Other -> [Cancellation]
             //                  ^ This message             ^ Message that was cancelled
             // Maybe devise test for this
             // For now, escalate the cancel to a fault
-            message.Context.Fault( "Cancel escalated to fault!" );
+            await message.Context.Fault( "Cancel escalated to fault!" );
         }
 
         public async Task ProcessStream(string name, StockStream stream)

@@ -13,9 +13,11 @@ namespace Pipes.Example.Implementation
         public static int ReadDelayMs = 1;
         public static int WriteDelayMs = 1;
         public static int ScanDelayMs = 2;
+        public static bool IsGlitchy = true;
 
         private static readonly Dictionary<Type,Dictionary<long, object>> Storage = new Dictionary<Type, Dictionary<long, object>>();
         private static readonly object Mutex = new { };
+        private static readonly Random _random = new Random();
 
 
         public static async Task StoreAsync<T>(long id, T data)
@@ -42,6 +44,9 @@ namespace Pipes.Example.Implementation
             }
             await Task.Delay(WriteDelayMs);
             //Thread.Sleep(15);
+
+            if (IsGlitchy && _random.NextDouble() > 0.95d)
+                throw new RandomException();
         }
 
         public static async Task<T> RetrieveAsync<T>(long id, Func<T> defaultValue) where T: class, new()
@@ -156,5 +161,9 @@ namespace Pipes.Example.Implementation
 
 
 
+    }
+
+    internal class RandomException : Exception
+    {
     }
 }

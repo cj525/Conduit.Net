@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.Remoting.Messaging;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Pipes.Abstraction;
 using Pipes.Example.Implementation;
 using Pipes.Example.PipelineAdjuncts;
 using Pipes.Example.PipelineMessages;
-using Pipes.Example.Schema;
 using Pipes.Interfaces;
 using Pipes.Types;
 using StreamMessage = Pipes.Interfaces.IPipelineMessage<Pipes.Example.Implementation.StockStream, Pipes.Types.OperationContext>;

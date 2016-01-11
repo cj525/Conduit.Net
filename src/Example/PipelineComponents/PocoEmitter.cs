@@ -19,21 +19,21 @@ namespace Pipes.Example.PipelineComponents
         {
             thisComponent
                 .Receives<FieldedData>()
-                .WhichCallsAsync(Inflate);
+                .WhichCalls(Inflate);
 
             thisComponent
                 .Emits<T>();
 
         }
 
-        private async Task Inflate(IPipelineMessage<FieldedData, OperationContext> message)
+        private void Inflate(IPipelineMessage<FieldedData, OperationContext> message)
         {
             // Localize
             var context = message.Context;
             var data = message.Data;
 
             // Get database connection (would be from connection pool factory)
-            var cache = context.Ensure(() => new ReflectionCache<T>());
+            var cache = context.EnsureAdjunct(() => new ReflectionCache<T>());
 
             // Create the poco
             var poco = cache.Inflate(data.Keys, field => data[field]);

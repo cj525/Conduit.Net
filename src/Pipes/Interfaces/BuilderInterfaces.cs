@@ -5,14 +5,22 @@ using Pipes.Types;
 
 namespace Pipes.Interfaces
 {
-    public interface IPipelineBuilder<TContext> : IPipelineConstruction<TContext> where TContext : OperationContext
+    public interface IPipelineBuilder<TContext> : IPipelineConstruction<TContext>, IPipelineExceptionHandler<TContext>, IPipelineInvoker<TContext> where TContext : OperationContext
+    {
+        void IsImplicitlyWired();
+    }
+
+    public interface IPipelineInvoker<TContext> where TContext : OperationContext
     {
         IPipelineInvocation<TContext> IsInvokedBy<TData>(ref Action<TData> trigger) where TData : class;
         IPipelineInvocation<TContext> IsInvokedBy<TData>(ref Action<TData, object> trigger) where TData : class;
         IPipelineInvocation<TContext> IsInvokedAsyncBy<TData>(ref Func<TData, Task> trigger) where TData : class;
         IPipelineInvocation<TContext> IsInvokedAsyncBy<TData>(ref Func<TData, object, Task> trigger) where TData : class;
-
-        void IsImplicitlyWired();
+    }
+    public interface IPipelineExceptionHandler<TContext> where TContext : OperationContext
+    {
+        IPipelineExceptionHandler<TContext> HandlesException<TException>(Func<IPipelineMessage<TContext>, TException, Task> handler) where TException : Exception;
+        IPipelineExceptionHandler<TContext> HandlesException<TException>(Action<IPipelineMessage<TContext>, TException> handler) where TException : Exception;
     }
 
     public interface IPipelineConstruction<TContext> where TContext : OperationContext

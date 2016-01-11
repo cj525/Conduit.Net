@@ -25,7 +25,7 @@ namespace Pipes.Implementation
 
         public void IsImplicitlyWired()
         {
-            _pipeline.AddRoutes(new [] {new Route<TContext>(null,null)});
+            _pipeline.ImplicitlyWired();
         }
         public IPipelineInvocation<TContext> IsInvokedBy<TData>(ref Action<TData, object> trigger) where TData : class
         {
@@ -96,6 +96,25 @@ namespace Pipes.Implementation
                 throw new ApplicationException("Can't create receiver on pipeline.");
             
             return new Receiver<TData,TContext>(_component);
+        }
+
+        public IPipelineExceptionHandler<TContext> HandlesException<TException>(Action<IPipelineMessage<TContext>, TException> handler) where TException : Exception
+        {
+            if (_component != null)
+                throw new NotSupportedException("Only the pipeline may declare an exception handler.");
+
+            _pipeline.RegisterExceptionHandler(handler);
+
+            return this;
+        }
+        public IPipelineExceptionHandler<TContext> HandlesException<TException>(Func<IPipelineMessage<TContext>, TException, Task> handler) where TException : Exception
+        {
+            if (_component != null)
+                throw new NotSupportedException("Only the pipeline may declare an exception handler.");
+
+            _pipeline.RegisterAsyncExceptionHandler(handler);
+
+            return this;
         }
     }
 }

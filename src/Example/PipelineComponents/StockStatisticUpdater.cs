@@ -22,7 +22,7 @@ namespace Pipes.Example.PipelineComponents
                 .WhichCallsAsync(UpdateStock);
         }
 
-        private async Task UpdateStock(IPipelineMessage<PocoCommited<StockTick>, OperationContext> message)
+        private static async Task UpdateStock(IPipelineMessage<PocoCommited<StockTick>, OperationContext> message)
         {
             var context = message.Context;
             var data = message.Data;

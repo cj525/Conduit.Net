@@ -60,6 +60,7 @@
     <Compile Include="Implementation\Conduit.cs" />
     <Compile Include="Implementation\Route.cs" />
     <Compile Include="Implementation\Thunk.cs" />
+    <Compile Include="Implementation\TypeSwitch.cs" />
     <Compile Include="Interfaces\CompletionInterfaces.cs" />
     <Compile Include="Interfaces\ContextInterfaces.cs" />
     <Compile Include="Types\CompletionBuffer.cs" />

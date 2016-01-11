@@ -196,7 +196,7 @@ namespace Pipes.Abstraction
             public void OnError(Exception exception)
             {
                 _disposables.Apply(item => item.Dispose());
-                _message.Context.HandleException(exception);
+                _message.Context.HandleException(exception).Wait();
             }
 
             public void OnNext(TData value)

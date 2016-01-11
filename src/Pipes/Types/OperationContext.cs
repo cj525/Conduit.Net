@@ -24,6 +24,7 @@ namespace Pipes.Types
         private int _messagesInFlight;
         private int _contextHolds;
         public object[] Components { get; internal set; }
+        public Exception UnhandledException { get; protected set; }
         public OperationContext(  )
         {
             //AssignActions(OnCompletion, OnCancel, OnFault);
@@ -50,24 +51,22 @@ namespace Pipes.Types
         }
 
 
-        public virtual void HandleException(Exception exception)
+        public virtual async Task HandleException(Exception exception)
         {
             if (exception is OperationCanceledException)
             {
-                Cancel(exception.Message).Wait();
+                if( !IsCancelled )
+                    await Cancel(exception.Message);
             }
             else
             {
                 UnhandledException = exception;
-                HasUnhandledException = true;
-                Fault(exception).Wait();
+                await Fault(exception);
             }
         }
 
-        public bool HasUnhandledException { get; protected set; }
 
-        public Exception UnhandledException { get; protected set; }
-
+        
 
         public override async Task Complete()
         {
@@ -96,6 +95,7 @@ namespace Pipes.Types
 
         public override async Task Fault(Exception exception)
         {
+            UnhandledException = exception;
             // Chain to base
             await base.Fault(exception);
             await WaitForCompletion();
@@ -218,7 +218,7 @@ namespace Pipes.Types
             return Adjuncts.Any(kv => type.IsAssignableFrom(kv.Key));
         }
 
-        public T Ensure<T>(Func<T> factory)
+        public T EnsureAdjunct<T>(Func<T> factory)
         {
             lock (Adjuncts)
             {

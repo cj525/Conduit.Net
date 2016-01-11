@@ -191,11 +191,12 @@ namespace Pipes.Types
             return GetEnumerator();
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             _isDisposed = true;
             _semaphoreCancelSource.Dispose();
             _semaphore.Dispose();
+            base.Dispose();
         }
 
         [SuppressMessage("ReSharper", "MemberCanBePrivate.Global", Justification = "Paired methods, Next/Previous, would look silly with different access modifier naming.")]

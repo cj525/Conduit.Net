@@ -19,13 +19,13 @@ namespace Pipes.Example.PipelineComponents
         {
             thisComponent
                 .Receives<StreamLine>()
-                .WhichCallsAsync(Parse);
+                .WhichCalls(Parse);
 
             thisComponent
                 .Emits<FieldedData>();
         }
 
-        private async Task Parse(IPipelineMessage<StreamLine, OperationContext> message)
+        private void Parse(IPipelineMessage<StreamLine, OperationContext> message)
         {
             // Localize
             var data = message.Data;

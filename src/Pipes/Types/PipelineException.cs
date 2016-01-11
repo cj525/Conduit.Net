@@ -1,19 +1,19 @@
-﻿using System;
-using Pipes.Abstraction;
-using Pipes.Interfaces;
+﻿//using System;
+//using Pipes.Abstraction;
+//using Pipes.Interfaces;
 
-namespace Pipes.Types
-{
-    public class PipelineException<TContext> : Exception where TContext : OperationContext
-    {
-        public IPipelineMessage<TContext> PipelineMessage { get; private set; }
+//namespace Pipes.Types
+//{
+//    public class PipelineException<TContext> : Exception where TContext : OperationContext
+//    {
+//        public IPipelineMessage<TContext> PipelineMessage { get; private set; }
         
-        private readonly Pipeline<TContext> _pipeline;
+//        private readonly Pipeline<TContext> _pipeline;
 
-        public PipelineException(Pipeline<TContext> pipeline, IPipelineMessage<TContext> pipelineMessage, Exception exception) : base("Pipeline Exception", exception)
-        {
-            _pipeline = pipeline;
-            PipelineMessage = pipelineMessage;
-        }
-    }
-}
+//        public PipelineException(Pipeline<TContext> pipeline, IPipelineMessage<TContext> pipelineMessage, Exception exception) : base("Pipeline Exception", exception)
+//        {
+//            _pipeline = pipeline;
+//            PipelineMessage = pipelineMessage;
+//        }
+//    }
+//}

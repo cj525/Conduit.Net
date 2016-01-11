@@ -17,7 +17,7 @@ namespace Pipes.Example.Implementation
 {
     class EntryPoint
     {
-        static int _entryCount = 20000;
+        static int _entryCount = 10000;
         static int _entriesCommited;
 
 

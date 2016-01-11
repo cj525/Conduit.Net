@@ -39,11 +39,7 @@ namespace Pipes.Implementation
             }
             catch (Exception exception)
             {
-                // Wrap exception with message (containing context) due to task not being available here (on purpose)
-                var pipelineException = new PipelineException<TContext>(_pipeline, message, exception);
-
-                // Handle the exception
-                _pipeline.HandleException(pipelineException);
+                await _pipeline.MessageException(message, exception);
             }
             finally
             {
